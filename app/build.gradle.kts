@@ -14,8 +14,8 @@ android {
         applicationId = "com.benasafrique.areascopemapper"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 4
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -66,11 +66,11 @@ dependencies {
 
     // Optional: OSMDroid GeoPackage (offline GeoPackage support)
     // Exclude ORMLite to avoid duplicate class errors
-    implementation(libs.osmdroidGeopackage) {
+    /*implementation(libs.osmdroidGeopackage) {
         isTransitive = true
         exclude(group = "com.j256.ormlite", module = "ormlite-core")
         exclude(group = "com.j256.ormlite", module = "ormlite-android")
-    }
+    }*/
 
     // JSON serialization
     implementation(libs.gson)

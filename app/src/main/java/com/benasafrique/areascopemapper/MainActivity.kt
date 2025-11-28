@@ -94,23 +94,11 @@ class MainActivity : AppCompatActivity() {
         // Edge-to-edge setup
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Apply insets
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            val sysInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+        // Edge-to-edge setup: prevent the decor from fitting system windows
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
-            // Padding for buttons or root layout
-            binding.rootLayout.setPadding(
-                sysInsets.left,
-                sysInsets.top,
-                sysInsets.right,
-                sysInsets.bottom
-            )
-
-            // Optional: pad map overlays (like compass) to not overlap nav bar
-            map.setPadding(0, 0, 0, sysInsets.bottom)
-
-            WindowInsetsCompat.CONSUMED
-        }
+        // Apply system bars padding to the root layout (automatically adjusts for system bars)
+        binding.root.applySystemBarsPadding()
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         map = binding.mapView
         map.setMultiTouchControls(true)
