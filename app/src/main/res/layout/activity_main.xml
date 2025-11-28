@@ -68,29 +68,29 @@
             android:id="@+id/btnCapturePoint"
             android:text="Capture Point"
             android:layout_width="wrap_content"
-            android:textColor="#474F7A"
+            android:textColor="#007BFF"
         android:layout_height="wrap_content"/>
 
         <Button
             android:id="@+id/btnUndo"
-            android:text="Undo"
+            android:text="Remove Point"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#474F7A"/>
+            android:textColor="#F44336"/>
 
         <Button
             android:id="@+id/btnFinish"
             android:text="Finish and Calculate Area"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#474F7A"/>
+            android:textColor="#388E3C"/>
 
         <Button
             android:id="@+id/btnSave"
             android:text="Save Polygon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#474F7A"
+            android:textColor="#388E3C"
             />
 
         <Button
@@ -98,14 +98,14 @@
             android:text="Export CSV"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#474F7A"/>
+            android:textColor="#FF5722"/>
 
         <Button
             android:id="@+id/btnExportPdf"
             android:text="GeoJson"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#474F7A"/>
+            android:textColor="#FF5722"/>
     </LinearLayout>
 
 </LinearLayout>
