@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SiteAreaMeasure" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your colors here -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryDark">@color/purple_700</item>
+    <style name="Theme.SiteAreaMeasure" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Set the status bar to grey -->
+        <item name="android:statusBarColor">@color/grey</item>
+
+        <!-- Remove the Action Bar and Title -->
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+
+        <!-- Other customizations -->
+        <item name="colorPrimary">@android:color/transparent</item>
+        <item name="colorPrimaryDark">@android:color/transparent</item>
         <item name="colorAccent">@color/teal_200</item>
     </style>
 </resources>
+
+

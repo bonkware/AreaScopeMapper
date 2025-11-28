@@ -1,87 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rootLayout"
-    android:orientation="vertical"
-    android:padding="8dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- MapView that takes up the whole screen -->
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_height="match_parent" />
 
-    <ScrollView
+    <!-- Title as an overlay on top of the map, placed at the top section -->
+    <TextView
+        android:id="@+id/txtTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Area Scope Mapper"
+        android:textSize="20sp"
+        android:textColor="#474F7A"
+    android:textStyle="bold"
+    android:layout_gravity="top|center_horizontal"
+    android:padding="16dp" />
+
+    <!-- Layout for the buttons, overlaid at the bottom of the map -->
+    <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:layout_gravity="bottom|center_horizontal">
 
+        <!-- Row for Mode label and Switch -->
         <LinearLayout
-            android:orientation="vertical"
+            android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="8dp">
+            android:gravity="center_vertical|end"> <!-- Align content to the right -->
 
-            <!-- Row for Mode label and Switch -->
-            <LinearLayout
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
+            <!-- TextView for Mode, aligned to the left part -->
+            <TextView
+                android:id="@+id/txtMode"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical">
+                android:text="Mode: Tap"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#474F7A"
+                android:layout_marginEnd="8dp" /> <!-- Add space between text and switch -->
 
-                <TextView
-                    android:id="@+id/txtMode"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Mode: Tap"
-                    android:textSize="16sp"/>
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/switchMappingMode"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="false"/>
-            </LinearLayout>
-
-            <!-- Other buttons stacked vertically -->
-            <Button
-                android:id="@+id/btnCapturePoint"
-                android:text="Capture Point"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
-            <Button
-                android:id="@+id/btnUndo"
-                android:text="Undo"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
-            <Button
-                android:id="@+id/btnFinish"
-                android:text="Finish and Calculate Area"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
-            <Button
-                android:id="@+id/btnSave"
-                android:text="Save Polygon"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
-            <Button
-                android:id="@+id/btnExportCsv"
-                android:text="Export CSV"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
-            <Button
-                android:id="@+id/btnExportPdf"
-                android:text="GeoJson"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+            <!-- Switch, aligned to the right -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchMappingMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false"/>
         </LinearLayout>
+        <!-- Layout for the buttons, overlaid on the map and aligned to the right -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="end|center_horizontal"
+        android:padding="16dp"
+        android:layout_gravity="bottom|end">
 
-    </ScrollView>
+        <Button
+            android:id="@+id/btnCapturePoint"
+            android:text="Capture Point"
+            android:layout_width="wrap_content"
+            android:textColor="#474F7A"
+        android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/btnUndo"
+            android:text="Undo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#474F7A"/>
+
+        <Button
+            android:id="@+id/btnFinish"
+            android:text="Finish and Calculate Area"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#474F7A"/>
+
+        <Button
+            android:id="@+id/btnSave"
+            android:text="Save Polygon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#474F7A"
+            />
+
+        <Button
+            android:id="@+id/btnExportCsv"
+            android:text="Export CSV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#474F7A"/>
+
+        <Button
+            android:id="@+id/btnExportPdf"
+            android:text="GeoJson"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#474F7A"/>
+    </LinearLayout>
 
 </LinearLayout>
+
+</FrameLayout>
