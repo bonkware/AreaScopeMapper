@@ -9,6 +9,7 @@ lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.12.0"
 composeBom = "2024.09.00"
 databindingRuntime = "8.13.1"
+material = "1.13.0"
 playServicesLocation = "21.3.0"
 appcompat = "1.7.1"
 gsonVersion = "2.13.2"
@@ -34,6 +35,7 @@ androidx-databinding-runtime = { group = "androidx.databinding", name = "databin
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 # Location service (keep if you still want GPS)
+material = { module = "com.google.android.material:material", version.ref = "material" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
 # Testing

@@ -22,9 +22,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.preference.PreferenceManager
-import com.example.siteareameasure.databinding.ActivityMainBinding
-import com.example.siteareameasure.databinding.DialogAreaBinding
-import com.example.siteareameasure.databinding.DialogSavePolygonBinding
+import com.benasafrique.areascopemapper.databinding.ActivityMainBinding
+import com.benasafrique.areascopemapper.databinding.DialogAreaBinding
+import com.benasafrique.areascopemapper.databinding.DialogSavePolygonBinding
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
