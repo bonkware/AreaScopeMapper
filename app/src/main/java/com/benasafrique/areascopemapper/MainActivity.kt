@@ -233,6 +233,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------- CAPTURE POINT --------------------
+    // -------------------- CAPTURE POINT --------------------
     private fun capturePoint() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestLocationPermission()
@@ -245,7 +246,20 @@ class MainActivity : AppCompatActivity() {
                 return@addOnSuccessListener
             }
 
+            // Filter location based on accuracy (less than 6 meters)
+            if (loc.accuracy > 6.0) {
+                Snackbar.make(binding.rootLayout, "GPS accuracy too low, try again", Snackbar.LENGTH_SHORT).show()
+                return@addOnSuccessListener
+            }
+
             val p = LatLng(loc.latitude, loc.longitude)
+
+            // Prevent duplicate points by checking proximity to last point
+            if (markers.isNotEmpty() && isCloseToLastPoint(p)) {
+                Snackbar.make(binding.rootLayout, "Point is too close to the last one", Snackbar.LENGTH_SHORT).show()
+                return@addOnSuccessListener
+            }
+
             markers.add(p)
 
             // Update polygon overlay dynamically
@@ -282,6 +296,14 @@ class MainActivity : AppCompatActivity() {
             drawEverything()
         }
     }
+    // Helper function to check if a point is too close to the last point
+    private fun isCloseToLastPoint(p: LatLng): Boolean {
+        val lastPoint = markers.last()
+        val distance = FloatArray(1)
+        Location.distanceBetween(lastPoint.latitude, lastPoint.longitude, p.latitude, p.longitude, distance)
+        return distance[0] < 3.0 // 3 meters threshold to prevent overlapping
+    }
+
 
     // -------------------- DRAW MAP -------------------
     private fun setupMapTapListener() {
@@ -394,15 +416,24 @@ class MainActivity : AppCompatActivity() {
         val dialog = Dialog(this)
         val dBind = DialogAreaBinding.inflate(layoutInflater)
         dialog.setContentView(dBind.root)
-        dBind.txtMeters.text = "${area.first} m²"
-        dBind.txtHectares.text = "${area.third} Ha"
-        dBind.txtAcres.text = "${area.second} Acres"
-        dBind.txtFeet.text = "${area.fourth} ft²"
-        dBind.txtYards.text = "${area.fifth} yd²"
+
+        // Round off values to 1 decimal place
+        val meters = String.format("%.1f", area.first)
+        val hectares = String.format("%.1f", area.third)
+        val acres = String.format("%.1f", area.second)
+        val feet = String.format("%.1f", area.fourth)
+        val yards = String.format("%.1f", area.fifth)
+
+        // Set the rounded values to the TextViews
+        dBind.txtMeters.text = "$meters m²"
+        dBind.txtHectares.text = "$hectares Ha"
+        dBind.txtAcres.text = "$acres Acres"
+        dBind.txtFeet.text = "$feet ft²"
+        dBind.txtYards.text = "$yards yd²"
+
         dBind.btnOk.setOnClickListener { dialog.dismiss() }
         dialog.show()
     }
-
     // -------------------- SAVE / LOAD --------------------
     private fun showSaveDialog() {
         val dialog = Dialog(this)
