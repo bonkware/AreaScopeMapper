@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLayout"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <org.osmdroid.views.MapView
+        android:id="@+id/mapView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp">
+
+            <!-- Row for Mode label and Switch -->
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/txtMode"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Mode: Tap"
+                    android:textSize="16sp"/>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchMappingMode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"/>
+            </LinearLayout>
+
+            <!-- Other buttons stacked vertically -->
+            <Button
+                android:id="@+id/btnCapturePoint"
+                android:text="Capture Point"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnUndo"
+                android:text="Undo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnFinish"
+                android:text="Finish and Calculate Area"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnSave"
+                android:text="Save Polygon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnExportCsv"
+                android:text="Export CSV"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnExportPdf"
+                android:text="GeoJson"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>
