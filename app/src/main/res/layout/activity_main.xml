@@ -86,14 +86,6 @@
             android:textColor="#388E3C"/>
 
         <Button
-            android:id="@+id/btnSave"
-            android:text="Save Polygon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#388E3C"
-            />
-
-        <Button
             android:id="@+id/btnExportCsv"
             android:text="Export CSV"
             android:layout_width="wrap_content"

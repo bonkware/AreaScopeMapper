@@ -6,7 +6,12 @@ import android.app.Dialog
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.GradientDrawable
 import android.location.Location
 import android.net.Uri
 import android.os.Build
@@ -14,10 +19,14 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Looper
 import android.provider.MediaStore
+import android.view.Gravity
+import android.view.View
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -80,10 +89,12 @@ class MainActivity : AppCompatActivity() {
     private var locationCallback: LocationCallback? = null
     private var mappingMode = MappingMode.MANUAL
 
+
     enum class MappingMode { WALKING, MANUAL }
 
     private lateinit var mapEventsOverlay: MapEventsOverlay
     private lateinit var switchMappingMode: SwitchMaterial
+    private lateinit var accuracyBubble: TextView
     private lateinit var txtMode: TextView
 
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -99,6 +110,34 @@ class MainActivity : AppCompatActivity() {
 
         // Apply system bars padding to the root layout (automatically adjusts for system bars)
         binding.root.applySystemBarsPadding()
+        // --- CREATE ACCURACY BUBBLE ---
+        // Initialize the class property
+        accuracyBubble = TextView(this).apply {
+            text = "Accuracy: m"
+            setPadding(25, 15, 25, 15)
+            setTextColor(Color.WHITE)      // White text
+            textSize = 14f
+
+            // Create rounded red background
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 25f          // Rounded corners
+                setColor(Color.RED)         // Red background
+            }
+        }
+
+// Position it top-right, below the compass
+        val params = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            rightMargin = 20
+            topMargin = 150 // adjust so it appears below the compass
+        }
+
+        binding.rootLayout.addView(accuracyBubble, params)
+
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         map = binding.mapView
         map.setMultiTouchControls(true)
@@ -115,7 +154,7 @@ class MainActivity : AppCompatActivity() {
         // Initialize the switch
         switchMappingMode = binding.switchMappingMode
         txtMode = binding.txtMode
-        updateModeText(mappingMode) // initialize text
+        updateModeText(mappingMode)
 
         switchMappingMode.setOnCheckedChangeListener { _, isChecked ->
             mappingMode = if (isChecked) MappingMode.WALKING else MappingMode.MANUAL
@@ -125,11 +164,12 @@ class MainActivity : AppCompatActivity() {
                 Snackbar.LENGTH_SHORT
             ).show()
         }
+
         binding.btnCapturePoint.setOnClickListener { capturePoint() }
         binding.btnUndo.setOnClickListener { undoPoint() }
         binding.btnFinish.setOnClickListener { finishPolygon() }
         //binding.switchMappingMode.setOnClickListener { toggleMappingMode() }
-        binding.btnSave.setOnClickListener { showSaveDialog() }
+        //binding.btnSave.setOnClickListener { showSaveDialog() }
         binding.btnExportCsv.setOnClickListener { exportLastAreaCsv() }
         binding.btnExportPdf.setOnClickListener { exportLastAreaGeoJson() }
     }
@@ -168,12 +208,6 @@ class MainActivity : AppCompatActivity() {
         val tileOverlay = TilesOverlay(tileProvider, this)
 
         map.overlays.add(tileOverlay)
-    }
-
-    private fun toggleMappingMode() {
-        mappingMode = if (mappingMode == MappingMode.MANUAL) MappingMode.WALKING else MappingMode.MANUAL
-        val msg = if (mappingMode == MappingMode.WALKING) "Walking mode ON" else "Tap mode ON"
-        Snackbar.make(binding.rootLayout, msg, Snackbar.LENGTH_SHORT).show()
     }
     private fun downloadMBTiles(url: String, destFile: File, onComplete: (Boolean) -> Unit) {
         Thread {
@@ -221,6 +255,18 @@ class MainActivity : AppCompatActivity() {
                 val loc = result.lastLocation ?: return
                 lastKnownLocation = loc
 
+                // --- UPDATE ACCURACY BUBBLE --- //
+                if (::accuracyBubble.isInitialized) {
+                    val acc = loc.accuracy
+                    accuracyBubble.text = "Accuracy: ${acc.toInt()} m"
+
+                    when {
+                        acc <= 3 -> accuracyBubble.setBackgroundColor(Color.parseColor("#4CAF50"))
+                        acc <= 8 -> accuracyBubble.setBackgroundColor(Color.parseColor("#FFC107"))
+                        else -> accuracyBubble.setBackgroundColor(Color.parseColor("#F44336"))
+                    }
+                }
+
                 if (mappingMode == MappingMode.WALKING) {
                     // auto-center map on user
                     map.controller.setCenter(GeoPoint(loc.latitude, loc.longitude))
@@ -232,7 +278,52 @@ class MainActivity : AppCompatActivity() {
         fusedLocation.requestLocationUpdates(request, locationCallback!!, Looper.getMainLooper())
     }
 
-    // -------------------- CAPTURE POINT --------------------
+    // -------------------- --------------------
+    private fun createNumberedMarkerIcon(number: Int): Bitmap {
+        // Load the default osmdroid marker icon
+        val base = ResourcesCompat.getDrawable(
+            resources,
+            org.osmdroid.library.R.drawable.marker_default,
+            null
+        )!!
+
+        val width = base.intrinsicWidth
+        val height = base.intrinsicHeight
+
+        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+
+        // Draw base marker
+        base.setBounds(0, 0, width, height)
+        base.draw(canvas)
+
+        // Draw number in a white circle (for visibility)
+        val circlePaint = Paint().apply {
+            color = Color.BLACK   // black circle
+            isAntiAlias = true
+        }
+
+        val circleX = width / 2f
+        val circleY = height * 0.33f   // upper third of marker
+        val radius = width * 0.22f
+
+        canvas.drawCircle(circleX, circleY, radius, circlePaint)
+
+        // Draw number on top
+        val paint = Paint().apply {
+            color = Color.WHITE
+            textSize = width * 0.32f   // scale automatically
+            textAlign = Paint.Align.CENTER
+            isFakeBoldText = true
+            isAntiAlias = true
+        }
+
+        val textY = circleY - ((paint.descent() + paint.ascent()) / 2)
+
+        canvas.drawText(number.toString(), circleX, textY, paint)
+
+        return bmp
+    }
     // -------------------- CAPTURE POINT --------------------
     private fun capturePoint() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -247,8 +338,12 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Filter location based on accuracy (less than 6 meters)
-            if (loc.accuracy > 6.0) {
-                Snackbar.make(binding.rootLayout, "GPS accuracy too low, try again", Snackbar.LENGTH_SHORT).show()
+            if (loc.accuracy > 5.0) {
+                Snackbar.make(
+                    binding.rootLayout,
+                    "GPS accuracy too low (${loc.accuracy.toInt()}m). For better area mapping, We only save points if accuracy is less than 5m.",
+                    Snackbar.LENGTH_LONG
+                ).show()
                 return@addOnSuccessListener
             }
 
@@ -329,10 +424,19 @@ class MainActivity : AppCompatActivity() {
         map.overlays.add(mapEventsOverlay)
 
         // Draw markers
-        markers.forEach {
+        markers.forEachIndexed { index, point ->
             val m = Marker(map)
-            m.position = GeoPoint(it.latitude, it.longitude)
+
+            m.position = GeoPoint(point.latitude, point.longitude)
             m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+
+            // Numbered marker icon
+            m.icon = BitmapDrawable(resources, createNumberedMarkerIcon(index + 1))
+
+            // Disable tooltip & click
+            m.infoWindow = null
+            m.setOnMarkerClickListener { _, _ -> true }
+
             map.overlays.add(m)
         }
 
@@ -432,21 +536,6 @@ class MainActivity : AppCompatActivity() {
         dBind.txtYards.text = "$yards yd²"
 
         dBind.btnOk.setOnClickListener { dialog.dismiss() }
-        dialog.show()
-    }
-    // -------------------- SAVE / LOAD --------------------
-    private fun showSaveDialog() {
-        val dialog = Dialog(this)
-        val b = DialogSavePolygonBinding.inflate(layoutInflater)
-        dialog.setContentView(b.root)
-        b.btnSavePolygon.setOnClickListener {
-            val name = b.inputName.text.toString().trim()
-            if (name.isNotEmpty()) {
-                File(filesDir, "$name.json").writeText(Gson().toJson(SavedPolygon(name, markers)))
-                Snackbar.make(binding.rootLayout, "Polygon Saved", Snackbar.LENGTH_SHORT).show()
-                dialog.dismiss()
-            }
-        }
         dialog.show()
     }
     // -------------------- EXPORT --------------------
