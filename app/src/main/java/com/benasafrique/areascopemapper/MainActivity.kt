@@ -20,6 +20,7 @@ import android.os.Environment
 import android.os.Looper
 import android.provider.MediaStore
 import android.view.Gravity
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.annotation.RequiresApi
@@ -107,31 +108,33 @@ class MainActivity : AppCompatActivity() {
         binding.root.applySystemBarsPadding()
         // --- CREATE ACCURACY BUBBLE ---
         // Initialize the class property
+        // In onCreate() after binding is ready
         accuracyBubble = TextView(this).apply {
             text = "Accuracy: m"
             setPadding(25, 15, 25, 15)
             setTextColor(Color.WHITE)
             textSize = 14f
-
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                // Use a large corner radius to make it pill-shaped
-                cornerRadius = 1000f
-                setColor(Color.parseColor("#F44336"))
+                cornerRadius = 25f
+                setColor(Color.parseColor("#F44336")) // red with corners
             }
         }
 
-// Position it top-right, below the compass
+// Position it top-right, below compass
         val params = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
         ).apply {
             gravity = Gravity.TOP or Gravity.END
             rightMargin = 20
-            topMargin = 150 // adjust so it appears below the compass
+            topMargin = 150
         }
 
+// Remove old parent if exists, then add
+        (accuracyBubble.parent as? ViewGroup)?.removeView(accuracyBubble)
         binding.rootLayout.addView(accuracyBubble, params)
+
 
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         map = binding.mapView
@@ -254,12 +257,16 @@ class MainActivity : AppCompatActivity() {
                     val acc = loc.accuracy
                     accuracyBubble.text = "Accuracy: ${acc.toInt()} m"
 
-                    when {
-                        acc <= 3 -> accuracyBubble.setBackgroundColor(Color.parseColor("#4CAF50"))
-                        acc <= 8 -> accuracyBubble.setBackgroundColor(Color.parseColor("#FFC107"))
-                        else -> accuracyBubble.setBackgroundColor(Color.parseColor("#F44336"))
-                    }
+                    val bg = accuracyBubble.background as? GradientDrawable
+                    bg?.setColor(
+                        when {
+                            acc <= 3 -> Color.parseColor("#4CAF50") // Green
+                            acc <= 8 -> Color.parseColor("#FFC107") // Amber
+                            else -> Color.parseColor("#F44336")     // Red
+                        }
+                    )
                 }
+
 
                 if (mappingMode == MappingMode.WALKING) {
                     // auto-center map on user
@@ -277,7 +284,6 @@ class MainActivity : AppCompatActivity() {
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L).build()
         fusedLocation.requestLocationUpdates(request, locationCallback!!, Looper.getMainLooper())
     }
-
     // -------------------- --------------------
     private fun createNumberedMarkerIcon(number: Int): Bitmap {
         // Load the default osmdroid marker icon
