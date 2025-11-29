@@ -20,20 +20,16 @@ import android.os.Environment
 import android.os.Looper
 import android.provider.MediaStore
 import android.view.Gravity
-import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.preference.PreferenceManager
 import com.benasafrique.areascopemapper.databinding.ActivityMainBinding
 import com.benasafrique.areascopemapper.databinding.DialogAreaBinding
-import com.benasafrique.areascopemapper.databinding.DialogSavePolygonBinding
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -41,7 +37,6 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.gson.Gson
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.MapTileProviderArray
@@ -49,6 +44,7 @@ import org.osmdroid.tileprovider.modules.IArchiveFile
 import org.osmdroid.tileprovider.modules.MBTilesFileArchive
 import org.osmdroid.tileprovider.modules.MapTileFileArchiveProvider
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.tileprovider.util.SimpleRegisterReceiver
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -71,7 +67,6 @@ data class Quintuple<A, B, C, D, E>(
     val first: A, val second: B, val third: C, val fourth: D, val fifth: E
 )
 
-data class SavedPolygon(val name: String, val points: List<LatLng>)
 data class LatLng(val latitude: Double, val longitude: Double)
 
 class MainActivity : AppCompatActivity() {
@@ -115,14 +110,14 @@ class MainActivity : AppCompatActivity() {
         accuracyBubble = TextView(this).apply {
             text = "Accuracy: m"
             setPadding(25, 15, 25, 15)
-            setTextColor(Color.WHITE)      // White text
+            setTextColor(Color.WHITE)
             textSize = 14f
 
-            // Create rounded red background
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 25f          // Rounded corners
-                setColor(Color.RED)         // Red background
+                // Use a large corner radius to make it pill-shaped
+                cornerRadius = 1000f
+                setColor(Color.parseColor("#F44336"))
             }
         }
 
@@ -142,13 +137,25 @@ class MainActivity : AppCompatActivity() {
         map = binding.mapView
         map.setMultiTouchControls(true)
         map.setBuiltInZoomControls(true)
+// Initialize mapEventsOverlay first
+        mapEventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                // Add marker logic
+                return true
+            }
+            override fun longPressHelper(p: GeoPoint?) = false
+        })
 
-        setupOfflineMap()
-        setupMapTapListener()
-
+        // Initialize compass
         compass = CompassOverlay(this, InternalCompassOrientationProvider(this), map)
         compass.enableCompass()
-        map.overlays.add(compass)
+
+        // Setup map
+        setupOfflineMap()
+
+        // Adjust viewport, markers, etc.
+        adjustMapViewport()
+        setupMapTapListener()
 
         requestLocationPermission()
         // Initialize the switch
@@ -182,55 +189,36 @@ class MainActivity : AppCompatActivity() {
 
     // -------------------- OFFLINE MAP --------------------
     private fun setupOfflineMap() {
-        val mbTilesFile = File(filesDir, "mytiles.mbtiles")
+        // Load osmdroid configuration
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
 
-        if (mbTilesFile.exists()) {
-            initMBTilesMap(mbTilesFile)
-        } else {
-            // fallback to online map if file missing
-            map.setTileSource(TileSourceFactory.MAPNIK)
-            Snackbar.make(binding.rootLayout, "Offline MBTiles not found, using online map", Snackbar.LENGTH_LONG).show()
-        }
+        // Use online OSM tiles
+        map.setTileSource(TileSourceFactory.MAPNIK)
+        map.setUseDataConnection(true) // allow downloading tiles when online
+
+        // Optional: limit cache size (50 MB here)
+        Configuration.getInstance().tileFileSystemCacheMaxBytes = 50L * 1024L * 1024L
+
+        // Set min/max zoom to prevent empty tiles
+        map.minZoomLevel = 5.0
+        map.maxZoomLevel = 19.0
+
+        // Enable multi-touch and built-in zoom controls
+        map.setMultiTouchControls(true)
+        map.setBuiltInZoomControls(true)
+
+        // Clear overlays and re-add essential overlays
+        map.overlays.clear()
+        map.overlays.add(compass)
+        map.overlays.add(mapEventsOverlay)
+
+        // Set default zoom and center (change coordinates if needed)
+        map.controller.setZoom(5.0)
+        map.controller.setCenter(GeoPoint(0.0, 0.0))
+
+        // Optional: notify user
+        Snackbar.make(binding.rootLayout, "Online map with offline caching enabled", Snackbar.LENGTH_LONG).show()
     }
-
-    private fun initMBTilesMap(mbTilesFile: File) {
-        val tileSource = TileSourceFactory.MAPNIK
-        val archive: IArchiveFile = MBTilesFileArchive.getDatabaseFileArchive(mbTilesFile)
-        val receiver = SimpleRegisterReceiver(this)
-
-        val archiveProvider = MapTileFileArchiveProvider(
-            receiver,          // IRegisterReceiver
-            tileSource,        // ITileSource
-            arrayOf(archive)   // Array<IArchiveFile>
-        )
-
-        val tileProvider = MapTileProviderArray(tileSource, null, arrayOf(archiveProvider))
-        val tileOverlay = TilesOverlay(tileProvider, this)
-
-        map.overlays.add(tileOverlay)
-    }
-    private fun downloadMBTiles(url: String, destFile: File, onComplete: (Boolean) -> Unit) {
-        Thread {
-            try {
-                val connection = URL(url).openConnection() as HttpURLConnection
-                connection.connect()
-                if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                    onComplete(false)
-                    return@Thread
-                }
-                destFile.outputStream().use { fileOut ->
-                    connection.inputStream.use { input ->
-                        input.copyTo(fileOut)
-                    }
-                }
-                onComplete(true)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                onComplete(false)
-            }
-        }.start()
-    }
-
     // -------------------- LOCATION --------------------
     private fun requestLocationPermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -244,7 +232,13 @@ class MainActivity : AppCompatActivity() {
             lastKnownLocation = it
             it?.let { loc ->
                 val p = GeoPoint(loc.latitude, loc.longitude)
-                map.controller.setZoom(15.0)
+                // Get map tile limits
+                val tileSource = map.tileProvider.tileSource
+                val clampedZoom = 15.0.coerceIn(tileSource.minimumZoomLevel.toDouble(), tileSource.maximumZoomLevel.toDouble())
+
+                map.controller.setZoom(clampedZoom)
+                map.controller.setCenter(GeoPoint(loc.latitude, loc.longitude))
+
                 map.controller.setCenter(p)
             }
         }
@@ -270,7 +264,13 @@ class MainActivity : AppCompatActivity() {
                 if (mappingMode == MappingMode.WALKING) {
                     // auto-center map on user
                     map.controller.setCenter(GeoPoint(loc.latitude, loc.longitude))
-                    map.controller.setZoom(15.0) // auto zoom to walking
+                    // Get map tile limits
+                    val tileSource = map.tileProvider.tileSource
+                    val clampedZoom = 15.0.coerceIn(tileSource.minimumZoomLevel.toDouble(), tileSource.maximumZoomLevel.toDouble())
+
+                    map.controller.setZoom(clampedZoom)
+                    map.controller.setCenter(GeoPoint(loc.latitude, loc.longitude))
+
                 }
             }
         }
@@ -466,15 +466,34 @@ class MainActivity : AppCompatActivity() {
     }
     private fun adjustMapViewport() {
         if (markers.isEmpty()) return
+
         val lats = markers.map { it.latitude }
         val lons = markers.map { it.longitude }
         val north = lats.maxOrNull()!!
         val south = lats.minOrNull()!!
         val east = lons.maxOrNull()!!
         val west = lons.minOrNull()!!
-        map.zoomToBoundingBox(BoundingBox(north, east, south, west), true)
-    }
 
+        // Add 10% padding
+        val latMargin = (north - south) * 0.1
+        val lonMargin = (east - west) * 0.1
+        val bbox = BoundingBox(north + latMargin, east + lonMargin, south - latMargin, west - lonMargin)
+
+        // Zoom to bounding box without animation
+        map.zoomToBoundingBox(bbox, false)
+
+        // Clamp zoom within tile source limits to prevent empty tiles
+        val tileSource = map.tileProvider.tileSource
+        val minZoom = tileSource.minimumZoomLevel.toDouble().coerceAtLeast(map.minZoomLevel)
+        val maxZoom = tileSource.maximumZoomLevel.toDouble().coerceAtMost(map.maxZoomLevel)
+        val zoom = map.zoomLevelDouble.coerceIn(minZoom, maxZoom)
+
+        // Apply zoom and center
+        map.controller.setZoom(zoom)
+        val centerLat = (north + south) / 2
+        val centerLon = (east + west) / 2
+        map.controller.setCenter(GeoPoint(centerLat, centerLon))
+    }
     // -------------------- AREA CALCULATION --------------------
     private fun latLonToMeters(lat: Double, lon: Double): Pair<Double, Double> {
         val R = 6378137.0
