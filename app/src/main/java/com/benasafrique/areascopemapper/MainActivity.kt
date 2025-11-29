@@ -244,7 +244,7 @@ class MainActivity : AppCompatActivity() {
             lastKnownLocation = it
             it?.let { loc ->
                 val p = GeoPoint(loc.latitude, loc.longitude)
-                map.controller.setZoom(18.0)
+                map.controller.setZoom(15.0)
                 map.controller.setCenter(p)
             }
         }
@@ -270,7 +270,7 @@ class MainActivity : AppCompatActivity() {
                 if (mappingMode == MappingMode.WALKING) {
                     // auto-center map on user
                     map.controller.setCenter(GeoPoint(loc.latitude, loc.longitude))
-                    map.controller.setZoom(19.0) // auto zoom to walking
+                    map.controller.setZoom(15.0) // auto zoom to walking
                 }
             }
         }

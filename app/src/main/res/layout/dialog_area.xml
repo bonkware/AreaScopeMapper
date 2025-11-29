@@ -1,50 +1,88 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="300dp"
     android:layout_height="wrap_content"
-    android:layout_gravity="center"
-    android:maxWidth="350dp"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="24dp"
+    android:background="@drawable/dialog_background"
+    android:elevation="8dp">
 
+    <!-- Title -->
+    <TextView
+        android:id="@+id/dialogTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Area Measurement"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#212121"
+        android:gravity="center"
+        android:paddingBottom="16dp"/>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Measurements -->
     <TextView
         android:id="@+id/txtMeters"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="0 m²"
-        android:textSize="18sp" />
+        android:textSize="16sp"
+        android:textColor="#424242"
+        android:paddingVertical="4dp"/>
 
     <TextView
         android:id="@+id/txtHectares"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="0 Ha"
-        android:textSize="18sp" />
+        android:textSize="16sp"
+        android:textColor="#424242"
+        android:paddingVertical="4dp"/>
 
     <TextView
         android:id="@+id/txtAcres"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="0 Acres"
-        android:textSize="18sp" />
+        android:textSize="16sp"
+        android:textColor="#424242"
+        android:paddingVertical="4dp"/>
 
     <TextView
         android:id="@+id/txtFeet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="0 ft²"
-        android:textSize="18sp" />
+        android:textSize="16sp"
+        android:textColor="#424242"
+        android:paddingVertical="4dp"/>
 
     <TextView
         android:id="@+id/txtYards"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="0 yd²"
-        android:textSize="18sp" />
+        android:textSize="16sp"
+        android:textColor="#424242"
+        android:paddingVertical="4dp"
+        android:layout_marginBottom="24dp"/>
 
-    <Button
+    <!-- OK Button -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnOk"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="OK"
-        android:textSize="16sp" />
+        android:textAllCaps="false"
+        android:textSize="16sp"
+        style="@style/Widget.MaterialComponents.Button"
+        app:cornerRadius="12dp"
+        android:backgroundTint="#6200EE"
+        android:textColor="#FFFFFF"/>
 </LinearLayout>
