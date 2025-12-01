@@ -40,13 +40,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.switchmaterial.SwitchMaterial
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.MapTileProviderArray
-import org.osmdroid.tileprovider.modules.IArchiveFile
-import org.osmdroid.tileprovider.modules.MBTilesFileArchive
-import org.osmdroid.tileprovider.modules.MapTileFileArchiveProvider
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.tileprovider.tilesource.XYTileSource
-import org.osmdroid.tileprovider.util.SimpleRegisterReceiver
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -54,14 +48,11 @@ import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.TilesOverlay
 import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import kotlin.math.abs
 import kotlin.math.ln
+import kotlin.math.sin
 import kotlin.math.tan
 
 data class Quintuple<A, B, C, D, E>(
@@ -507,24 +498,42 @@ class MainActivity : AppCompatActivity() {
         val y = ln(tan(Math.PI / 4 + Math.toRadians(lat) / 2)) * R
         return Pair(x, y)
     }
-
     private fun computePolygonArea(points: List<LatLng>): Quintuple<Double, Double, Double, Double, Double> {
         if (points.size < 3) return Quintuple(0.0, 0.0, 0.0, 0.0, 0.0)
-        val xy = points.map { latLonToMeters(it.latitude, it.longitude) }
-        var area = 0.0
-        for (i in 1 until xy.size) {
-            val (x0, y0) = xy[i - 1]
-            val (x1, y1) = xy[i]
-            area += (x0 * y1 - y0 * x1) / 2
-        }
-        val sqMeters = abs(area)
-        val acres = sqMeters * 0.00024711
-        val hectares = sqMeters / 10000
-        val sqFeet = sqMeters * 10.7639
-        val sqYards = sqMeters * 1.19599
-        return Quintuple(sqMeters, acres, hectares, sqFeet, sqYards)
-    }
 
+        // WGS84 ellipsoid parameters
+        val a = 6378137.0       // semi-major axis in meters
+        val f = 1 / 298.257223563
+        val b = a * (1 - f)     // semi-minor axis
+
+        var total = 0.0
+        val n = points.size
+
+        fun rad(deg: Double) = Math.toRadians(deg)
+
+        for (i in 0 until n) {
+            val p1 = points[i]
+            val p2 = points[(i + 1) % n]
+
+            val lat1 = rad(p1.latitude)
+            val lon1 = rad(p1.longitude)
+            val lat2 = rad(p2.latitude)
+            val lon2 = rad(p2.longitude)
+
+            // Use approximate formula for small segments (sufficient for most practical areas)
+            val deltaLon = lon2 - lon1
+            total += deltaLon * (2 + sin(lat1) + sin(lat2))
+        }
+
+        val area = abs(total * a * b / 2.0) // area in square meters
+
+        val acres = area * 0.00024711
+        val hectares = area / 10000
+        val sqFeet = area * 10.7639
+        val sqYards = area * 1.19599
+
+        return Quintuple(area, acres, hectares, sqFeet, sqYards)
+    }
     private fun finishPolygon() {
         if (markers.size < 3) {
             Snackbar.make(binding.rootLayout, "Add at least 3 points", Snackbar.LENGTH_SHORT).show()
