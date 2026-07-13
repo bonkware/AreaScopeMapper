@@ -6,16 +6,14 @@ plugins {
 
 android {
     namespace = "com.benasafrique.areascopemapper"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.benasafrique.areascopemapper"
-        minSdk = 24
-        targetSdk = 36
-        versionCode = 7
-        versionName = "1.6"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 8
+        versionName = "1.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -30,20 +28,19 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
-        //compose = true
         viewBinding = true
     }
 }
 
 dependencies {
-    // Core AndroidX
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -55,26 +52,17 @@ dependencies {
     implementation(libs.androidx.databinding.runtime)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-
-    // Location provider for GPS
     implementation(libs.play.services.location)
 
-    // OSMDroid (OpenStreetMap) core
+    // OSMDroid
     implementation(libs.osmdroid)
-    implementation(libs.osmdroidWms)
+    implementation(libs.osmbonuspack)
     implementation(libs.osmdroidMapsforge)
 
-    // Optional: OSMDroid GeoPackage (offline GeoPackage support)
-    // Exclude ORMLite to avoid duplicate class errors
-    /*implementation(libs.osmdroidGeopackage) {
-        isTransitive = true
-        exclude(group = "com.j256.ormlite", module = "ormlite-core")
-        exclude(group = "com.j256.ormlite", module = "ormlite-android")
-    }*/
-
-    // JSON serialization
+    // Utilities
     implementation(libs.gson)
     implementation(libs.androidx.preference.ktx)
+    implementation(libs.opencsv)
 
     // Testing
     testImplementation(libs.junit)
@@ -84,4 +72,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

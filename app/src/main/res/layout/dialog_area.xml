@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="300dp"
@@ -12,7 +13,7 @@
         android:id="@+id/dialogTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Area Measurement"
+        android:text="@string/area_measurement"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="#212121"
@@ -73,15 +74,35 @@
         android:paddingVertical="4dp"
         android:layout_marginBottom="24dp"/>
 
-    <!-- OK Button -->
-    <Button
-        android:id="@+id/btnOk"
+    <!-- Buttons -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="OK"
-        android:textAllCaps="false"
-        android:textSize="16sp"
-        style="@style/Widget.MaterialComponents.Button"
-        app:cornerRadius="12dp"
-        android:backgroundTint="#6200EE"/>
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/btn_save"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:cornerRadius="12dp"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btnOk"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@android:string/ok"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            style="@style/Widget.MaterialComponents.Button"
+            app:cornerRadius="12dp"
+            android:backgroundTint="#6200EE"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
 </LinearLayout>

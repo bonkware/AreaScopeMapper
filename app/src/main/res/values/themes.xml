@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SiteAreaMeasure" parent="Theme.AppCompat.Light.NoActionBar">
-        <!-- Set the status bar to grey -->
-        <item name="android:statusBarColor">@color/grey</item>
+    <style name="Theme.SiteAreaMeasure" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Transparent status and navigation bars for edge-to-edge look -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
 
-        <!-- Remove the Action Bar and Title -->
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
+        <!-- Main brand color (Deep Blue) -->
+        <item name="colorPrimary">#3E5AED</item>
+        <item name="colorOnPrimary">@color/white</item>
 
-        <!-- Other customizations -->
-        <item name="colorPrimary">@android:color/transparent</item>
-        <item name="colorPrimaryDark">@android:color/transparent</item>
-        <item name="colorAccent">@color/teal_200</item>
+        <!-- Accent color -->
+        <item name="colorSecondary">@color/teal_700</item>
+        <item name="colorOnSecondary">@color/white</item>
+
+        <item name="android:windowBackground">@color/white</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/black</item>
     </style>
 </resources>
-
-

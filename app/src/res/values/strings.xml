@@ -1,0 +1,38 @@
+<resources>
+    <string name="app_name">Area Scope Mapper</string>
+    <string name="title_area_scope">Area Scope</string>
+    <string name="accuracy_format">Accuracy: %1$d m</string>
+    <string name="hint_long_press_navigate">Long press map to navigate</string>
+    <string name="desc_undo">Undo last point</string>
+    <string name="btn_capture">Capture</string>
+    <string name="desc_finish">Finish polygon</string>
+    <string name="mode_tap">Mode: Tap</string>
+    <string name="mode_walking">Mode: Walking</string>
+    <string name="walking_mode_on">Walking mode ON</string>
+    <string name="tap_mode_on">Tap mode ON</string>
+    <string name="btn_csv">CSV</string>
+    <string name="btn_geo">Geo</string>
+
+    <string name="format_meters">%s m²</string>
+    <string name="format_hectares">%s Ha</string>
+    <string name="format_acres">%s Acres</string>
+    <string name="format_feet">%s ft²</string>
+    <string name="format_yards">%s yd²</string>
+
+    <string name="no_gps_fix">No GPS Fix</string>
+    <string name="low_accuracy_warning">GPS accuracy too low (%1$dm). For better area mapping, We only save points if accuracy is less than 5m.</string>
+    <string name="point_too_close">Point is too close to the last one</string>
+    <string name="point_captured">Point Captured</string>
+    <string name="calculating_route">Calculating route...</string>
+    <string name="route_added">Navigation route added</string>
+    <string name="routing_failed">Routing failed</string>
+    <string name="error_min_points">Add at least 3 points</string>
+    <string name="map_ready_caching">Online map with offline caching enabled</string>
+    <string name="no_data_to_export">No polygon data to export</string>
+    <string name="csv_exported">CSV exported to Downloads</string>
+    <string name="failed_csv">Failed to create CSV file</string>
+    <string name="no_points_to_export">No points to export</string>
+    <string name="geojson_exported">GeoJSON exported to Downloads</string>
+    <string name="failed_geojson">Failed to create GeoJSON file</string>
+    <string name="permission_denied">Permission denied</string>
+</resources>
