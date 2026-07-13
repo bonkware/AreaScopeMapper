@@ -63,5 +63,6 @@
     <string name="enable">Enable</string>
     <string name="cancel">Cancel</string>
     <string name="label_export">EXPORT</string>
+    <string name="btn_area">Area</string>
     <string name="saved_polygons">Saved Polygons</string>
 </resources>

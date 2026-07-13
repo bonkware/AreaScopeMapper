@@ -12,8 +12,8 @@ android {
         applicationId = "com.benasafrique.areascopemapper"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.7"
+        versionCode = 10
+        versionName = "1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

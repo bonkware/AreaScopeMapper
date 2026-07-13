@@ -170,6 +170,9 @@ class MainActivity : AppCompatActivity() {
         binding.btnSettings.setOnClickListener { showSettingsDialog() }
         binding.btnPoints.setOnClickListener { showPointsDialog() }
         binding.btnStopNav.setOnClickListener { stopNavigation() }
+
+        // Update btnFinish text initially if needed, though it's set in XML
+        // binding.btnFinish.setText(R.string.btn_area)
     }
 
     private fun showSettingsDialog() {
