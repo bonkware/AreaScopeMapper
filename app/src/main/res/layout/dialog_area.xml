@@ -8,17 +8,41 @@
     android:background="@drawable/dialog_background"
     android:elevation="8dp">
 
-    <!-- Title -->
-    <TextView
-        android:id="@+id/dialogTitle"
+    <!-- Header with Title and Compass -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/area_measurement"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="#212121"
-        android:gravity="center"
-        android:paddingBottom="16dp"/>
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:id="@+id/dialogTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/area_measurement"
+            android:textColor="#212121"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:id="@+id/layoutDialogCompass"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/dialog_background"
+            android:backgroundTint="#F5F5F5"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgDialogCompass"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_compass_needle"
+                app:tint="?attr/colorPrimary" />
+        </FrameLayout>
+    </LinearLayout>
 
     <!-- Divider -->
     <View

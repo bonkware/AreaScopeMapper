@@ -1,16 +1,42 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="24dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/save_polygon"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:paddingBottom="16dp"/>
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/save_polygon"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:id="@+id/layoutDialogCompass"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/dialog_background"
+            android:backgroundTint="#F5F5F5"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgDialogCompass"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_compass_needle"
+                app:tint="?attr/colorPrimary" />
+        </FrameLayout>
+    </LinearLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"

@@ -17,6 +17,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Looper
 import android.provider.MediaStore
+import android.widget.ImageView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -29,8 +30,15 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
 import com.benasafrique.areascopemapper.databinding.ActivityMainBinding
 import com.benasafrique.areascopemapper.databinding.DialogAreaBinding
+import com.benasafrique.areascopemapper.databinding.DialogLoadPolygonBinding
 import com.benasafrique.areascopemapper.databinding.DialogSavePolygonBinding
 import com.benasafrique.areascopemapper.databinding.DialogSettingsBinding
+import com.benasafrique.areascopemapper.databinding.ItemSavedPolygonBinding
+import com.benasafrique.areascopemapper.databinding.DialogLayersBinding
+import com.benasafrique.areascopemapper.databinding.DialogPointsBinding
+import com.benasafrique.areascopemapper.databinding.DialogExportBinding
+import com.benasafrique.areascopemapper.databinding.ItemLayerBinding
+import com.benasafrique.areascopemapper.databinding.ItemPointBinding
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -55,6 +63,7 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
@@ -77,6 +86,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var map: MapView
     private lateinit var compass: CompassOverlay
     private lateinit var locationOverlay: MyLocationNewOverlay
+    private var currentDialogCompass: ImageView? = null
 
     private val markers = mutableListOf<LatLng>()
     private val importedPoints = mutableListOf<LatLng>()
@@ -155,9 +165,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnFinish.setOnClickListener { finishPolygon() }
         binding.btnSave.setOnClickListener { showSaveDialog() }
         binding.btnSaved.setOnClickListener { showSavedPolygonsDialog() }
-        binding.btnExportCsv.setOnClickListener { exportLastAreaCsv() }
-        binding.btnExportGeoJson.setOnClickListener { exportLastAreaGeoJson() }
-        binding.btnExportGpx.setOnClickListener { exportLastAreaGpx() }
+        binding.btnExport.setOnClickListener { showExportDialog() }
         binding.btnImport.setOnClickListener { importLauncher.launch("*/*") }
         binding.btnSettings.setOnClickListener { showSettingsDialog() }
         binding.btnPoints.setOnClickListener { showPointsDialog() }
@@ -166,9 +174,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSettingsDialog() {
         val dBind = DialogSettingsBinding.inflate(layoutInflater)
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setView(dBind.root)
+            .setOnDismissListener { currentDialogCompass = null }
             .create()
+
+        if (targetPoint != null) {
+            dBind.layoutDialogCompass.visibility = android.view.View.VISIBLE
+            currentDialogCompass = dBind.imgDialogCompass
+            updateGuidanceUI() // Force initial rotation
+        }
 
         // Sync initial state
         if (mappingMode == MappingMode.WALKING) {
@@ -187,11 +202,42 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        dBind.btnManageLayers.setOnClickListener {
-            dialog.dismiss()
-            showLayersDialog()
-        }
+        dBind.btnClose.setOnClickListener { dialog.dismiss() }
 
+        dialog.show()
+    }
+
+    private fun showExportDialog() {
+        val dBind = DialogExportBinding.inflate(layoutInflater)
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dBind.root)
+            .create()
+
+        dBind.btnExportCsv.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                exportLastAreaCsv()
+            } else {
+                // Fallback for older versions if necessary, or just call it if handled internally
+                exportLastAreaCsv()
+            }
+            dialog.dismiss()
+        }
+        dBind.btnExportGeoJson.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                exportLastAreaGeoJson()
+            } else {
+                exportLastAreaGeoJson()
+            }
+            dialog.dismiss()
+        }
+        dBind.btnExportGpx.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                exportLastAreaGpx()
+            } else {
+                exportLastAreaGpx()
+            }
+            dialog.dismiss()
+        }
         dBind.btnClose.setOnClickListener { dialog.dismiss() }
 
         dialog.show()
@@ -214,20 +260,20 @@ class MainActivity : AppCompatActivity() {
         // Load osmdroid configuration
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
 
-        // Use online OSM tiles
+        // Use online OSM tiles - tiles viewed once will be cached automatically
         map.setTileSource(TileSourceFactory.MAPNIK)
-        map.setUseDataConnection(true) // allow downloading tiles when online
-
-        // Optional: limit cache size (50 MB here)
-        Configuration.getInstance().tileFileSystemCacheMaxBytes = 50L * 1024L * 1024L
+        
+        // Increase cache size to 500 MB for better offline experience
+        Configuration.getInstance().tileFileSystemCacheMaxBytes = 500L * 1024L * 1024L
+        Configuration.getInstance().tileFileSystemCacheTrimBytes = 450L * 1024L * 1024L
 
         // Set min/max zoom to prevent empty tiles
-        map.minZoomLevel = 5.0
-        map.maxZoomLevel = 19.0
+        map.minZoomLevel = 2.0
+        map.maxZoomLevel = 20.0
 
         // Enable multi-touch and built-in zoom controls
         map.setMultiTouchControls(true)
-        map.setBuiltInZoomControls(true)
+        map.setBuiltInZoomControls(false) // Hide default +/- buttons for a cleaner UI
 
         // Clear overlays and re-add essential overlays
         map.overlays.clear()
@@ -257,7 +303,7 @@ class MainActivity : AppCompatActivity() {
     private fun enableMyLocation() {
         val locationManager = getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
         if (!locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) {
-            androidx.appcompat.app.AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.gps_disabled_title)
                 .setMessage(R.string.gps_disabled_message)
                 .setPositiveButton(R.string.enable) { _, _ ->
@@ -678,15 +724,45 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val layerNames = importedLayers.keys.toTypedArray()
-        val checkedItems = BooleanArray(layerNames.size) { name ->
-            map.overlays.contains(importedLayers[layerNames[name]])
+        val dBind = DialogLayersBinding.inflate(layoutInflater)
+        
+        if (targetPoint != null) {
+            dBind.layoutDialogCompass.visibility = android.view.View.VISIBLE
+            currentDialogCompass = dBind.imgDialogCompass
+            updateGuidanceUI()
         }
 
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Manage Layers")
-            .setMultiChoiceItems(layerNames, checkedItems) { _, which, isChecked ->
-                val layer = importedLayers[layerNames[which]] ?: return@setMultiChoiceItems
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dBind.root)
+            .setOnDismissListener { currentDialogCompass = null }
+            .create()
+
+        val layerNames = importedLayers.keys.toList()
+        dBind.recyclerLayers.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        dBind.recyclerLayers.adapter = LayersAdapter(layerNames)
+
+        dBind.btnClearAll.setOnClickListener {
+            importedLayers.values.forEach { map.overlays.remove(it) }
+            importedLayers.clear()
+            map.invalidate()
+            dialog.dismiss()
+            showSnackbar(getString(R.string.layers_cleared))
+        }
+
+        dBind.btnOk.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+    }
+
+    inner class LayersAdapter(private val names: List<String>) : androidx.recyclerview.widget.RecyclerView.Adapter<LayersAdapter.ViewHolder>() {
+        inner class ViewHolder(val b: ItemLayerBinding) : androidx.recyclerview.widget.RecyclerView.ViewHolder(b.root)
+        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int) = ViewHolder(ItemLayerBinding.inflate(layoutInflater, parent, false))
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val name = names[position]
+            val layer = importedLayers[name]!!
+            holder.b.checkLayer.text = name
+            holder.b.checkLayer.isChecked = map.overlays.contains(layer)
+            holder.b.checkLayer.setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked) {
                     if (!map.overlays.contains(layer)) map.overlays.add(layer)
                 } else {
@@ -694,18 +770,12 @@ class MainActivity : AppCompatActivity() {
                 }
                 map.invalidate()
             }
-            .setPositiveButton("OK", null)
-            .setNeutralButton("Clear All") { _, _ ->
-                importedLayers.values.forEach { map.overlays.remove(it) }
-                importedLayers.clear()
-                map.invalidate()
-                showSnackbar(getString(R.string.layers_cleared))
-            }
-            .show()
+        }
+        override fun getItemCount() = names.size
     }
 
     private fun showPointsDialog() {
-        val displayList = mutableListOf<Pair<LatLng, Boolean>>() 
+        val displayList = mutableListOf<Pair<LatLng, Boolean>>()
         markers.forEach { displayList.add(it to true) }
         importedPoints.forEach { displayList.add(it to false) }
 
@@ -714,43 +784,65 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val pointNames = displayList.mapIndexed { index, pair -> 
-            val p = pair.first
-            val type = if (pair.second) "M" else "I"
-            p.name ?: "$type-Point ${index + 1}" 
-        }.toTypedArray()
+        val dBind = DialogPointsBinding.inflate(layoutInflater)
         
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Point Manager")
-            .setItems(pointNames) { _, which ->
-                val (point, isMeasurement) = displayList[which]
-                val geoPoint = GeoPoint(point.latitude, point.longitude)
-                
-                val options = arrayOf("Center on map", "Guide to (Compass)", "Delete")
-                androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle(pointNames[which])
-                    .setItems(options) { _, optIndex ->
-                        when (optIndex) {
-                            0 -> {
-                                map.controller.animateTo(geoPoint)
-                                map.controller.setZoom(18.0)
-                            }
-                            1 -> { startGuidingTo(geoPoint, pointNames[which]) }
-                            2 -> {
-                                if (isMeasurement) markers.remove(point)
-                                else {
-                                    importedPoints.remove(point)
-                                    saveImportedPoints()
-                                }
-                                drawEverything()
-                                showSnackbar(getString(R.string.point_deleted))
-                            }
-                        }
-                    }
-                    .show()
+        if (targetPoint != null) {
+            dBind.layoutDialogCompass.visibility = android.view.View.VISIBLE
+            currentDialogCompass = dBind.imgDialogCompass
+            updateGuidanceUI()
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dBind.root)
+            .setOnDismissListener { currentDialogCompass = null }
+            .create()
+
+        dBind.recyclerPoints.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        dBind.recyclerPoints.adapter = PointsAdapter(displayList) { dialog.dismiss() }
+
+        dBind.btnClose.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+    }
+
+    inner class PointsAdapter(
+        private val list: MutableList<Pair<LatLng, Boolean>>,
+        private val onAction: () -> Unit
+    ) : androidx.recyclerview.widget.RecyclerView.Adapter<PointsAdapter.ViewHolder>() {
+        inner class ViewHolder(val b: ItemPointBinding) : androidx.recyclerview.widget.RecyclerView.ViewHolder(b.root)
+        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int) = ViewHolder(ItemPointBinding.inflate(layoutInflater, parent, false))
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val (point, isMeasurement) = list[position]
+            val type = if (isMeasurement) "M" else "I"
+            val name = point.name ?: "$type-Point ${position + 1}"
+            
+            holder.b.txtPointName.text = name
+            holder.b.txtPointCoords.text = String.format("%.6f, %.6f", point.latitude, point.longitude)
+            
+            holder.itemView.setOnClickListener {
+                map.controller.animateTo(GeoPoint(point.latitude, point.longitude))
+                map.controller.setZoom(18.0)
+                onAction()
             }
-            .setPositiveButton("Close", null)
-            .show()
+            
+            holder.b.btnNav.setOnClickListener {
+                startGuidingTo(GeoPoint(point.latitude, point.longitude), name)
+                onAction()
+            }
+            
+            holder.b.btnDelete.setOnClickListener {
+                if (isMeasurement) markers.remove(point)
+                else {
+                    importedPoints.remove(point)
+                    saveImportedPoints()
+                }
+                list.removeAt(position)
+                notifyItemRemoved(position)
+                drawEverything()
+                if (list.isEmpty()) onAction()
+            }
+        }
+        override fun getItemCount() = list.size
     }
 
     private var targetPoint: GeoPoint? = null
@@ -807,6 +899,15 @@ class MainActivity : AppCompatActivity() {
         val bearing = currentGeo.bearingTo(target)
         val directionStr = getDirectionText(bearing.toFloat())
         
+        // Rotate the navigation compass icon
+        // We want the arrow to point to the target. 
+        // If we adjust for device orientation, it becomes a real guiding compass.
+        val deviceOrientation = compass.orientation
+        val finalRotation = bearing.toFloat() - deviceOrientation
+        
+        binding.imgNavCompass.rotation = finalRotation
+        currentDialogCompass?.rotation = finalRotation
+
         binding.txtNextInstruction.text = getString(R.string.guiding_to_with_bearing, destinationMarker?.title ?: "Target", directionStr)
         binding.txtDistanceTime.text = getString(R.string.nav_dist_time_format, distance / 1000, (distance / 50).toInt()) 
         
@@ -913,7 +1014,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showMarkerOptions(marker: Marker) {
         val options = arrayOf("Guide to (Compass)")
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Navigate to ${marker.title}")
             .setItems(options) { _, _ ->
                 startGuidingTo(marker.position, marker.title)
@@ -1023,9 +1124,15 @@ class MainActivity : AppCompatActivity() {
         dBind.txtFeet.text = getString(R.string.format_feet, feet)
         dBind.txtYards.text = getString(R.string.format_yards, yards)
 
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+        if (targetPoint != null) {
+            dBind.layoutDialogCompass.visibility = android.view.View.VISIBLE
+            currentDialogCompass = dBind.imgDialogCompass
+            updateGuidanceUI()
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
             .setView(dBind.root)
-            .setPositiveButton("OK", null)
+            .setOnDismissListener { currentDialogCompass = null }
             .create()
 
         dBind.btnOk.setOnClickListener { dialog.dismiss() }
@@ -1038,8 +1145,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSaveDialog() {
         val dBind = DialogSavePolygonBinding.inflate(layoutInflater)
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        
+        if (targetPoint != null) {
+            dBind.layoutDialogCompass.visibility = android.view.View.VISIBLE
+            currentDialogCompass = dBind.imgDialogCompass
+            updateGuidanceUI()
+        }
+
+        MaterialAlertDialogBuilder(this)
             .setView(dBind.root)
+            .setOnDismissListener { currentDialogCompass = null }
             .setPositiveButton(getString(R.string.btn_save)) { _, _ ->
                 val name = dBind.inputName.text.toString().ifEmpty { "Polygon ${System.currentTimeMillis()}" }
                 savePolygonLocally(name)
@@ -1059,9 +1174,18 @@ class MainActivity : AppCompatActivity() {
             mutableListOf()
         }
 
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this).create()
-        val dBind = com.benasafrique.areascopemapper.databinding.DialogLoadPolygonBinding.inflate(layoutInflater)
-        dialog.setView(dBind.root)
+        val dBind = DialogLoadPolygonBinding.inflate(layoutInflater)
+        
+        if (targetPoint != null) {
+            dBind.layoutDialogCompass.visibility = android.view.View.VISIBLE
+            currentDialogCompass = dBind.imgDialogCompass
+            updateGuidanceUI()
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dBind.root)
+            .setOnDismissListener { currentDialogCompass = null }
+            .create()
 
         if (savedPolygons.isEmpty()) {
             dBind.txtNoSaved.visibility = android.view.View.VISIBLE
@@ -1115,11 +1239,11 @@ class MainActivity : AppCompatActivity() {
         private val onSelect: (SavedPolygon) -> Unit
     ) : androidx.recyclerview.widget.RecyclerView.Adapter<PolygonAdapter.ViewHolder>() {
 
-        inner class ViewHolder(val itemBinding: com.benasafrique.areascopemapper.databinding.ItemSavedPolygonBinding) : 
+        inner class ViewHolder(val itemBinding: ItemSavedPolygonBinding) : 
             androidx.recyclerview.widget.RecyclerView.ViewHolder(itemBinding.root)
 
         override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): ViewHolder {
-            val b = com.benasafrique.areascopemapper.databinding.ItemSavedPolygonBinding.inflate(
+            val b = ItemSavedPolygonBinding.inflate(
                 android.view.LayoutInflater.from(parent.context), parent, false
             )
             return ViewHolder(b)

@@ -8,7 +8,7 @@
     <string name="desc_undo">Undo last point</string>
     <string name="desc_layers">Layer management</string>
     <string name="desc_points">Point list</string>
-    <string name="btn_capture">Capture</string>
+    <string name="btn_capture">Point</string>
     <string name="desc_finish">Finish polygon</string>
     <string name="mode_tap">Mode: Tap</string>
     <string name="mode_walking">Mode: Walking</string>
@@ -62,4 +62,6 @@
     <string name="gps_disabled_message">GPS is required for accurate area mapping. Please enable it in settings.</string>
     <string name="enable">Enable</string>
     <string name="cancel">Cancel</string>
+    <string name="label_export">EXPORT</string>
+    <string name="saved_polygons">Saved Polygons</string>
 </resources>

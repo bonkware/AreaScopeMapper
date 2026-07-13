@@ -6,12 +6,37 @@
     android:orientation="vertical"
     android:padding="24dp">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/btn_settings"
-        android:textAppearance="?attr/textAppearanceTitleLarge"
-        android:layout_marginBottom="16dp" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/btn_settings"
+            android:textAppearance="?attr/textAppearanceTitleLarge" />
+
+        <FrameLayout
+            android:id="@+id/layoutDialogCompass"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="@drawable/dialog_background"
+            android:backgroundTint="#F5F5F5"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgDialogCompass"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_compass_needle"
+                app:tint="?attr/colorPrimary" />
+        </FrameLayout>
+    </LinearLayout>
 
     <TextView
         android:layout_width="match_parent"
@@ -24,7 +49,6 @@
         android:id="@+id/toggleMappingMode"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
         app:singleSelection="true"
         app:selectionRequired="true">
 
@@ -46,20 +70,6 @@
 
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Layers"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="8dp" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnManageLayers"
-        style="?attr/materialButtonOutlinedStyle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/desc_layers"
-        app:icon="@android:drawable/ic_menu_mapmode" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnClose"

@@ -45,6 +45,7 @@
             android:layout_height="wrap_content"
             app:cardCornerRadius="24dp"
             app:cardElevation="4dp"
+            app:cardBackgroundColor="#FFFFFF"
             app:strokeWidth="0dp">
 
             <TextView
@@ -66,7 +67,9 @@
             android:layout_marginTop="4dp"
             android:layout_marginStart="8dp"
             android:textAppearance="?attr/textAppearanceBodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textColor="#CC000000"
+            android:background="#FFFFFF"
+            android:paddingHorizontal="4dp"
             tools:text="Mode: Manual" />
     </LinearLayout>
 
@@ -108,8 +111,9 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:visibility="gone"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="6dp"
+        app:cardBackgroundColor="#FFFFFF"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/cardTitle"
@@ -122,6 +126,21 @@
             android:orientation="horizontal"
             android:padding="16dp">
 
+            <FrameLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/dialog_background"
+                android:backgroundTint="#F5F5F5">
+
+                <ImageView
+                    android:id="@+id/imgNavCompass"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_compass_needle" />
+            </FrameLayout>
+
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -133,7 +152,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textColor="?attr/colorPrimary"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold"
                     tools:text="Turn left onto Main St" />
 
@@ -142,7 +161,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorPrimary"
                     tools:text="200m • 2 min remaining" />
             </LinearLayout>
 
@@ -161,22 +181,12 @@
         android:id="@+id/layoutActions"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="8dp"
         android:layout_marginBottom="16dp"
         android:gravity="center"
         android:orientation="vertical"
         app:layout_constraintBottom_toTopOf="@+id/cardBottomControls"
         app:layout_constraintEnd_toEndOf="parent">
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/btnSaved"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:contentDescription="Saved Polygons"
-            app:fabSize="mini"
-            app:srcCompat="@android:drawable/ic_menu_agenda"
-            app:tint="?attr/colorPrimary" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/btnUndo"
@@ -224,6 +234,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="#FFFFFF"
         app:cardCornerRadius="28dp"
         app:cardElevation="8dp"
         app:layout_constraintBottom_toTopOf="@id/bottomInsetSpacer"
@@ -236,58 +247,71 @@
             android:layout_height="64dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="4dp"
+            android:divider="?android:attr/dividerVertical"
+            android:showDividers="middle"
+            android:dividerPadding="16dp">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPoints"
                 style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:minWidth="0dp"
-                android:paddingHorizontal="8dp"
+                android:paddingHorizontal="4dp"
                 android:text="@string/btn_points"
-                app:icon="@android:drawable/ic_menu_mylocation" />
+                android:textSize="11sp"
+                app:icon="@android:drawable/ic_menu_mylocation"
+                app:iconPadding="4dp"
+                app:iconSize="18dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnExportCsv"
+                android:id="@+id/btnSaved"
                 style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1.2"
                 android:minWidth="0dp"
                 android:paddingHorizontal="4dp"
-                android:text="@string/btn_csv" />
+                android:text="@string/saved_polygons"
+                android:textSize="11sp"
+                app:icon="@android:drawable/ic_menu_agenda"
+                app:iconPadding="4dp"
+                app:iconSize="18dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnExportGeoJson"
+                android:id="@+id/btnExport"
                 style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:minWidth="0dp"
                 android:paddingHorizontal="4dp"
-                android:text="@string/btn_geo" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnExportGpx"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minWidth="0dp"
-                android:paddingHorizontal="4dp"
-                android:text="@string/btn_gpx" />
+                android:text="@string/label_export"
+                android:textSize="11sp"
+                app:icon="@android:drawable/ic_menu_share"
+                app:iconPadding="4dp"
+                app:iconSize="18dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnImport"
                 style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:minWidth="0dp"
                 android:paddingHorizontal="4dp"
-                android:text="@string/btn_import" />
+                android:text="@string/btn_import"
+                android:textSize="11sp"
+                app:icon="@android:drawable/ic_input_add"
+                app:iconPadding="4dp"
+                app:iconSize="18dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSettings"
                 style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="wrap_content"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
                 app:icon="@android:drawable/ic_menu_preferences" />
         </LinearLayout>
