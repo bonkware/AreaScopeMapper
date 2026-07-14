@@ -33,7 +33,6 @@
     <string name="no_gps_fix">No GPS Fix</string>
     <string name="low_accuracy_warning">GPS accuracy too low (%1$dm). For better area mapping, We only save points if accuracy is less than 5m.</string>
     <string name="point_too_close">Point is too close to the last one</string>
-    <string name="point_captured">Point Captured</string>
     <string name="error_min_points">Add at least 3 points</string>
     <string name="map_ready_caching">Online map with offline caching enabled</string>
     <string name="no_data_to_export">No polygon data to export</string>

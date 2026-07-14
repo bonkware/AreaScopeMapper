@@ -66,6 +66,7 @@ import org.osmdroid.views.overlay.Polyline
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
+import org.osmdroid.views.overlay.compass.IOrientationProvider
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import org.xmlpull.v1.XmlPullParser
@@ -138,14 +139,13 @@ class MainActivity : AppCompatActivity() {
         initMapEventsOverlay()
 
         // Initialize compass
-        compass = CompassOverlay(this, InternalCompassOrientationProvider(this), map)
+        compass = NavCompassOverlay(this, InternalCompassOrientationProvider(this), map)
         compass.enableCompass()
         compass.setCompassCenter(36f, 150f) // Move it down a bit to avoid overlap with Title
 
         // Initialize Location Overlay
         locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(this), map)
         locationOverlay.enableMyLocation()
-        locationOverlay.enableFollowLocation()
         locationOverlay.isDrawAccuracyEnabled = true
 
         // Setup map
@@ -318,21 +318,15 @@ class MainActivity : AppCompatActivity() {
 
         fusedLocation.lastLocation.addOnSuccessListener {
             lastKnownLocation = it
-            it?.let { loc ->
-                val p = GeoPoint(loc.latitude, loc.longitude)
-                // Get map tile limits
-                val tileSource = map.tileProvider.tileSource
-                val clampedZoom = 15.0.coerceIn(tileSource.minimumZoomLevel.toDouble(), tileSource.maximumZoomLevel.toDouble())
-
-                map.controller.setZoom(clampedZoom)
-                map.controller.setCenter(p)
-            }
+            // Automatically adjust viewport once location is acquired
+            adjustMapViewport()
         }
 
         // Follow user as they walk
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val loc = result.lastLocation ?: return
+                val isFirstFix = lastKnownLocation == null
                 lastKnownLocation = loc
 
                 // --- UPDATE ACCURACY BUBBLE --- //
@@ -346,8 +340,11 @@ class MainActivity : AppCompatActivity() {
                 }
                 binding.cardAccuracy.setCardBackgroundColor(color)
 
+                if (isFirstFix) {
+                    adjustMapViewport()
+                }
 
-                if (mappingMode == MappingMode.WALKING) {
+                if (mappingMode == MappingMode.WALKING && targetPoint == null) {
                     // auto-center map on user
                     val tileSource = map.tileProvider.tileSource
                     val clampedZoom = 15.0.coerceIn(tileSource.minimumZoomLevel.toDouble(), tileSource.maximumZoomLevel.toDouble())
@@ -355,7 +352,9 @@ class MainActivity : AppCompatActivity() {
                     map.controller.setZoom(clampedZoom)
                     map.controller.setCenter(GeoPoint(loc.latitude, loc.longitude))
                 }
-                updateGuidanceUI()
+                if (targetPoint != null) {
+                    updateGuidanceUI()
+                }
             }
         }
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L).build()
@@ -456,7 +455,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             drawEverything()
-            showSnackbar(getString(R.string.point_captured))
         }
     }
     private fun undoPoint() {
@@ -491,8 +489,7 @@ class MainActivity : AppCompatActivity() {
                 if (mappingMode == MappingMode.MANUAL && p != null) {
                     val point = LatLng(p.latitude, p.longitude)
                     markers.add(point)
-                    drawEverything() // auto-join polyline immediately
-                    showSnackbar(getString(R.string.point_captured))
+                    drawEverything()
                 }
                 return true
             }
@@ -515,6 +512,12 @@ class MainActivity : AppCompatActivity() {
         guidanceOverlay = null
         destinationMarker = null
         binding.cardInstruction.visibility = android.view.View.GONE
+        
+        // Restore following if in walking mode
+        if (mappingMode == MappingMode.WALKING) {
+            locationOverlay.enableFollowLocation()
+        }
+        
         map.invalidate()
         showSnackbar("Navigation stopped")
     }
@@ -853,6 +856,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startGuidingTo(point: GeoPoint, name: String) {
         targetPoint = point
+        locationOverlay.disableFollowLocation()
         
         binding.cardInstruction.visibility = android.view.View.VISIBLE
         
@@ -876,12 +880,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateGuidanceUI() {
         val target = targetPoint ?: return
-        val current = lastKnownLocation ?: locationOverlay.myLocation?.let { 
-            Location("").apply { 
-                latitude = it.latitude
-                longitude = it.longitude 
-            }
-        } ?: return
+        // Strictly use lastKnownLocation for guidance originating from current GPS
+        val current = lastKnownLocation ?: return
         
         val currentGeo = GeoPoint(current.latitude, current.longitude)
         
@@ -901,25 +901,41 @@ class MainActivity : AppCompatActivity() {
         
         val bearing = currentGeo.bearingTo(target)
         val directionStr = getDirectionText(bearing.toFloat())
-        
-        // Rotate the navigation compass icon
-        // We want the arrow to point to the target. 
-        // If we adjust for device orientation, it becomes a real guiding compass.
-        val deviceOrientation = compass.orientation
-        val finalRotation = bearing.toFloat() - deviceOrientation
-        
-        binding.imgNavCompass.rotation = finalRotation
-        currentDialogCompass?.rotation = finalRotation
+
+        // Standard orientation update logic
+        updateGuidanceRotation(compass.orientation)
 
         binding.txtNextInstruction.text = getString(R.string.guiding_to_with_bearing, destinationMarker?.title ?: "Target", directionStr)
         binding.txtDistanceTime.text = getString(R.string.nav_dist_time_format, distance / 1000, (distance / 50).toInt()) 
         
-        if (distance < 10) {
+        // 3m Arrival Threshold
+        if (distance < 3) {
             showSnackbar(getString(R.string.arrived_at_target))
             stopNavigation()
         }
         
         drawEverything()
+    }
+
+    private fun updateGuidanceRotation(deviceOrientation: Float) {
+        val target = targetPoint ?: return
+        val current = lastKnownLocation ?: return
+        
+        val results = FloatArray(1)
+        Location.distanceBetween(current.latitude, current.longitude, target.latitude, target.longitude, results)
+        val distance = results[0]
+        
+        val bearing = GeoPoint(current.latitude, current.longitude).bearingTo(target)
+        
+        // 10m North-up transition for last-meter guidance
+        val finalRotation = if (distance < 10) {
+            -deviceOrientation
+        } else {
+            bearing.toFloat() - deviceOrientation
+        }
+
+        binding.imgNavCompass.rotation = finalRotation
+        currentDialogCompass?.rotation = finalRotation
     }
 
     private fun getDirectionText(bearing: Float): String {
@@ -1005,7 +1021,7 @@ class MainActivity : AppCompatActivity() {
         // Add navigation/guidance overlays on top
         guidanceOverlay?.let { map.overlays.add(it) }
         destinationMarker?.let { map.overlays.add(it) }
-        
+
         // My location on top
         if (!map.overlays.contains(locationOverlay)) {
             map.overlays.add(locationOverlay)
@@ -1031,13 +1047,16 @@ class MainActivity : AppCompatActivity() {
         if (targetPoint != null) {
             // Focusing on navigation/guidance: include user and destination
             lastKnownLocation?.let { pointsToInclude.add(GeoPoint(it.latitude, it.longitude)) }
-            locationOverlay.myLocation?.let { pointsToInclude.add(it) }
             targetPoint?.let { pointsToInclude.add(it) }
-            destinationMarker?.position?.let { pointsToInclude.add(it) }
         } else {
             // Regular view: include all markers and imported points
             pointsToInclude.addAll(markers.map { GeoPoint(it.latitude, it.longitude) })
             pointsToInclude.addAll(importedPoints.map { GeoPoint(it.latitude, it.longitude) })
+            
+            // Fallback: If no markers or imported points exist, zoom to current location
+            if (pointsToInclude.isEmpty()) {
+                lastKnownLocation?.let { pointsToInclude.add(GeoPoint(it.latitude, it.longitude)) }
+            }
         }
 
         if (pointsToInclude.isEmpty()) return
@@ -1492,6 +1511,16 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         map.onDetach()
         locationCallback?.let { fusedLocation.removeLocationUpdates(it) }
+    }
+
+    private inner class NavCompassOverlay(context: android.content.Context, provider: IOrientationProvider, mapView: MapView) 
+        : CompassOverlay(context, provider, mapView) {
+        override fun onOrientationChanged(orientation: Float, orientationProvider: IOrientationProvider?) {
+            super.onOrientationChanged(orientation, orientationProvider)
+            runOnUiThread {
+                updateGuidanceRotation(orientation)
+            }
+        }
     }
 }
 
