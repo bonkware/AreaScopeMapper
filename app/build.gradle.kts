@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "com.benasafrique.areascopemapper"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.benasafrique.areascopemapper"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 11
-        versionName = "1.8"
+        targetSdk = 36
+        versionCode = 14
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -109,7 +109,6 @@ class MainActivity : AppCompatActivity() {
         uri?.let { handleImportFile(it) }
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -220,8 +219,7 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 exportLastAreaCsv()
             } else {
-                // Fallback for older versions if necessary, or just call it if handled internally
-                exportLastAreaCsv()
+                showSnackbar("Export requires Android 10+")
             }
             dialog.dismiss()
         }
@@ -229,7 +227,7 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 exportLastAreaGeoJson()
             } else {
-                exportLastAreaGeoJson()
+                showSnackbar("Export requires Android 10+")
             }
             dialog.dismiss()
         }
@@ -237,7 +235,7 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 exportLastAreaGpx()
             } else {
-                exportLastAreaGpx()
+                showSnackbar("Export requires Android 10+")
             }
             dialog.dismiss()
         }
