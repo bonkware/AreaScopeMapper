@@ -150,8 +150,11 @@ class MainActivity : AppCompatActivity() {
             // Ignore if already initialized
         }
         map = binding.mapView
+        map.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
         map.setMultiTouchControls(true)
-        map.setBuiltInZoomControls(true)
+        map.setBuiltInZoomControls(false)
+        map.isHorizontalMapRepetitionEnabled = false
+        map.isVerticalMapRepetitionEnabled = false
 
         // Initialize mapEventsOverlay
         initMapEventsOverlay()
@@ -822,9 +825,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Increase cache size to 500 MB for better offline experience
-        Configuration.getInstance().tileFileSystemCacheMaxBytes = 500L * 1024L * 1024L
-        Configuration.getInstance().tileFileSystemCacheTrimBytes = 450L * 1024L * 1024L
+        // High-performance map cache and multi-threading configuration
+        val config = Configuration.getInstance()
+        val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(2)
+        config.cacheMapTileCount = 24.toShort()
+        config.cacheMapTileOvershoot = 12.toShort()
+        config.tileDownloadThreads = cores.toShort()
+        config.tileFileSystemThreads = cores.toShort()
+        config.tileFileSystemCacheMaxBytes = 1024L * 1024L * 1024L // 1 GB cache
+        config.tileFileSystemCacheTrimBytes = 900L * 1024L * 1024L
 
         // Set min/max zoom to prevent empty tiles
         map.minZoomLevel = 2.0
