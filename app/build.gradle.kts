@@ -54,10 +54,14 @@ dependencies {
     implementation(libs.material)
     implementation(libs.play.services.location)
 
-    // OSMDroid
+    // OSMDroid & Mapsforge
     implementation(libs.osmdroid)
     implementation(libs.osmbonuspack)
     implementation(libs.osmdroidMapsforge)
+    implementation(libs.mapsforgeMapAndroid)
+    implementation(libs.mapsforgeMapReader)
+    implementation(libs.mapsforgeMap)
+    implementation(libs.mapsforgeThemes)
 
     // Utilities
     implementation(libs.gson)

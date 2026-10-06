@@ -10,7 +10,10 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.drawable.BitmapDrawable
+import android.content.Context
 import android.location.Location
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +36,8 @@ import com.benasafrique.areascopemapper.databinding.DialogAreaBinding
 import com.benasafrique.areascopemapper.databinding.DialogLoadPolygonBinding
 import com.benasafrique.areascopemapper.databinding.DialogSavePolygonBinding
 import com.benasafrique.areascopemapper.databinding.DialogSettingsBinding
+import com.benasafrique.areascopemapper.databinding.DialogDownloadMapBinding
+import com.benasafrique.areascopemapper.databinding.ItemDownloadedMapBinding
 import com.benasafrique.areascopemapper.databinding.ItemSavedPolygonBinding
 import com.benasafrique.areascopemapper.databinding.DialogLayersBinding
 import com.benasafrique.areascopemapper.databinding.DialogPointsBinding
@@ -47,8 +52,17 @@ import com.google.android.gms.location.Priority
 import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import org.osmdroid.mapsforge.MapsForgeTileSource
+import org.osmdroid.mapsforge.MapsForgeTileProvider
+import org.osmdroid.tileprovider.MapTileProviderBasic
+import org.osmdroid.tileprovider.util.SimpleRegisterReceiver
+import org.mapsforge.map.android.graphics.AndroidGraphicFactory
+import org.mapsforge.map.rendertheme.InternalRenderTheme
+import org.mapsforge.map.reader.MapFile
+import java.io.File
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.bonuspack.kml.KmlDocument
@@ -130,6 +144,11 @@ class MainActivity : AppCompatActivity() {
 
 
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        try {
+            AndroidGraphicFactory.createInstance(application)
+        } catch (e: Exception) {
+            // Ignore if already initialized
+        }
         map = binding.mapView
         map.setMultiTouchControls(true)
         map.setBuiltInZoomControls(true)
@@ -204,7 +223,404 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        dBind.btnDownloadOfflineMap.setOnClickListener {
+            dialog.dismiss()
+            showDownloadMapDialog()
+        }
+
         dBind.btnClose.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+    }
+
+    private fun showDownloadMapDialog() {
+        val dBind = DialogDownloadMapBinding.inflate(layoutInflater)
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dBind.root)
+            .setCancelable(true)
+            .create()
+
+        val countryMapUrls = linkedMapOf(
+            // Africa
+            "Algeria" to "https://download.mapsforge.org/maps/v5/africa/algeria.map",
+            "Angola" to "https://download.mapsforge.org/maps/v5/africa/angola.map",
+            "Benin" to "https://download.mapsforge.org/maps/v5/africa/benin.map",
+            "Botswana" to "https://download.mapsforge.org/maps/v5/africa/botswana.map",
+            "Burkina Faso" to "https://download.mapsforge.org/maps/v5/africa/burkina-faso.map",
+            "Burundi" to "https://download.mapsforge.org/maps/v5/africa/burundi.map",
+            "Cameroon" to "https://download.mapsforge.org/maps/v5/africa/cameroon.map",
+            "Cape Verde" to "https://download.mapsforge.org/maps/v5/africa/cape-verde.map",
+            "Central African Republic" to "https://download.mapsforge.org/maps/v5/africa/central-african-republic.map",
+            "Chad" to "https://download.mapsforge.org/maps/v5/africa/chad.map",
+            "Comoros" to "https://download.mapsforge.org/maps/v5/africa/comoros.map",
+            "Congo" to "https://download.mapsforge.org/maps/v5/africa/congo.map",
+            "Djibouti" to "https://download.mapsforge.org/maps/v5/africa/djibouti.map",
+            "Egypt" to "https://download.mapsforge.org/maps/v5/africa/egypt.map",
+            "Equatorial Guinea" to "https://download.mapsforge.org/maps/v5/africa/equatorial-guinea.map",
+            "Eritrea" to "https://download.mapsforge.org/maps/v5/africa/eritrea.map",
+            "Eswatini" to "https://download.mapsforge.org/maps/v5/africa/eswatini.map",
+            "Ethiopia" to "https://download.mapsforge.org/maps/v5/africa/ethiopia.map",
+            "Gabon" to "https://download.mapsforge.org/maps/v5/africa/gabon.map",
+            "Gambia" to "https://download.mapsforge.org/maps/v5/africa/gambia.map",
+            "Ghana" to "https://download.mapsforge.org/maps/v5/africa/ghana.map",
+            "Guinea" to "https://download.mapsforge.org/maps/v5/africa/guinea.map",
+            "Guinea-Bissau" to "https://download.mapsforge.org/maps/v5/africa/guinea-bissau.map",
+            "Ivory Coast" to "https://download.mapsforge.org/maps/v5/africa/ivory-coast.map",
+            "Kenya" to "https://download.mapsforge.org/maps/v5/africa/kenya.map",
+            "Lesotho" to "https://download.mapsforge.org/maps/v5/africa/lesotho.map",
+            "Liberia" to "https://download.mapsforge.org/maps/v5/africa/liberia.map",
+            "Libya" to "https://download.mapsforge.org/maps/v5/africa/libya.map",
+            "Madagascar" to "https://download.mapsforge.org/maps/v5/africa/madagascar.map",
+            "Malawi" to "https://download.mapsforge.org/maps/v5/africa/malawi.map",
+            "Mali" to "https://download.mapsforge.org/maps/v5/africa/mali.map",
+            "Mauritania" to "https://download.mapsforge.org/maps/v5/africa/mauritania.map",
+            "Mauritius" to "https://download.mapsforge.org/maps/v5/africa/mauritius.map",
+            "Morocco" to "https://download.mapsforge.org/maps/v5/africa/morocco.map",
+            "Mozambique" to "https://download.mapsforge.org/maps/v5/africa/mozambique.map",
+            "Namibia" to "https://download.mapsforge.org/maps/v5/africa/namibia.map",
+            "Niger" to "https://download.mapsforge.org/maps/v5/africa/niger.map",
+            "Nigeria" to "https://download.mapsforge.org/maps/v5/africa/nigeria.map",
+            "Rwanda" to "https://download.mapsforge.org/maps/v5/africa/rwanda.map",
+            "Senegal" to "https://download.mapsforge.org/maps/v5/africa/senegal.map",
+            "Seychelles" to "https://download.mapsforge.org/maps/v5/africa/seychelles.map",
+            "Sierra Leone" to "https://download.mapsforge.org/maps/v5/africa/sierra-leone.map",
+            "Somalia" to "https://download.mapsforge.org/maps/v5/africa/somalia.map",
+            "South Africa" to "https://download.mapsforge.org/maps/v5/africa/south_africa.map",
+            "South Sudan" to "https://download.mapsforge.org/maps/v5/africa/south-sudan.map",
+            "Sudan" to "https://download.mapsforge.org/maps/v5/africa/sudan.map",
+            "Tanzania" to "https://download.mapsforge.org/maps/v5/africa/tanzania.map",
+            "Togo" to "https://download.mapsforge.org/maps/v5/africa/togo.map",
+            "Tunisia" to "https://download.mapsforge.org/maps/v5/africa/tunisia.map",
+            "Uganda" to "https://download.mapsforge.org/maps/v5/africa/uganda.map",
+            "Zambia" to "https://download.mapsforge.org/maps/v5/africa/zambia.map",
+            "Zimbabwe" to "https://download.mapsforge.org/maps/v5/africa/zimbabwe.map",
+
+            // Asia
+            "Afghanistan" to "https://download.mapsforge.org/maps/v5/asia/afghanistan.map",
+            "Armenia" to "https://download.mapsforge.org/maps/v5/asia/armenia.map",
+            "Azerbaijan" to "https://download.mapsforge.org/maps/v5/asia/azerbaijan.map",
+            "Bahrain" to "https://download.mapsforge.org/maps/v5/asia/bahrain.map",
+            "Bangladesh" to "https://download.mapsforge.org/maps/v5/asia/bangladesh.map",
+            "Bhutan" to "https://download.mapsforge.org/maps/v5/asia/bhutan.map",
+            "Brunei" to "https://download.mapsforge.org/maps/v5/asia/brunei.map",
+            "Cambodia" to "https://download.mapsforge.org/maps/v5/asia/cambodia.map",
+            "China" to "https://download.mapsforge.org/maps/v5/asia/china.map",
+            "Cyprus" to "https://download.mapsforge.org/maps/v5/asia/cyprus.map",
+            "Georgia" to "https://download.mapsforge.org/maps/v5/asia/georgia.map",
+            "India" to "https://download.mapsforge.org/maps/v5/asia/india.map",
+            "Indonesia" to "https://download.mapsforge.org/maps/v5/asia/indonesia.map",
+            "Iran" to "https://download.mapsforge.org/maps/v5/asia/iran.map",
+            "Iraq" to "https://download.mapsforge.org/maps/v5/asia/iraq.map",
+            "Israel" to "https://download.mapsforge.org/maps/v5/asia/israel.map",
+            "Japan" to "https://download.mapsforge.org/maps/v5/asia/japan.map",
+            "Jordan" to "https://download.mapsforge.org/maps/v5/asia/jordan.map",
+            "Kazakhstan" to "https://download.mapsforge.org/maps/v5/asia/kazakhstan.map",
+            "Kuwait" to "https://download.mapsforge.org/maps/v5/asia/kuwait.map",
+            "Kyrgyzstan" to "https://download.mapsforge.org/maps/v5/asia/kyrgyzstan.map",
+            "Laos" to "https://download.mapsforge.org/maps/v5/asia/laos.map",
+            "Lebanon" to "https://download.mapsforge.org/maps/v5/asia/lebanon.map",
+            "Malaysia" to "https://download.mapsforge.org/maps/v5/asia/malaysia.map",
+            "Maldives" to "https://download.mapsforge.org/maps/v5/asia/maldives.map",
+            "Mongolia" to "https://download.mapsforge.org/maps/v5/asia/mongolia.map",
+            "Myanmar" to "https://download.mapsforge.org/maps/v5/asia/myanmar.map",
+            "Nepal" to "https://download.mapsforge.org/maps/v5/asia/nepal.map",
+            "Oman" to "https://download.mapsforge.org/maps/v5/asia/oman.map",
+            "Pakistan" to "https://download.mapsforge.org/maps/v5/asia/pakistan.map",
+            "Palestine" to "https://download.mapsforge.org/maps/v5/asia/palestine.map",
+            "Philippines" to "https://download.mapsforge.org/maps/v5/asia/philippines.map",
+            "Qatar" to "https://download.mapsforge.org/maps/v5/asia/qatar.map",
+            "Saudi Arabia" to "https://download.mapsforge.org/maps/v5/asia/saudi-arabia.map",
+            "Singapore" to "https://download.mapsforge.org/maps/v5/asia/singapore.map",
+            "South Korea" to "https://download.mapsforge.org/maps/v5/asia/south-korea.map",
+            "Sri Lanka" to "https://download.mapsforge.org/maps/v5/asia/sri-lanka.map",
+            "Syria" to "https://download.mapsforge.org/maps/v5/asia/syria.map",
+            "Taiwan" to "https://download.mapsforge.org/maps/v5/asia/taiwan.map",
+            "Tajikistan" to "https://download.mapsforge.org/maps/v5/asia/tajikistan.map",
+            "Thailand" to "https://download.mapsforge.org/maps/v5/asia/thailand.map",
+            "Timor-Leste" to "https://download.mapsforge.org/maps/v5/asia/timor-leste.map",
+            "Turkey" to "https://download.mapsforge.org/maps/v5/asia/turkey.map",
+            "Turkmenistan" to "https://download.mapsforge.org/maps/v5/asia/turkmenistan.map",
+            "United Arab Emirates" to "https://download.mapsforge.org/maps/v5/asia/united-arab-emirates.map",
+            "Uzbekistan" to "https://download.mapsforge.org/maps/v5/asia/uzbekistan.map",
+            "Vietnam" to "https://download.mapsforge.org/maps/v5/asia/vietnam.map",
+            "Yemen" to "https://download.mapsforge.org/maps/v5/asia/yemen.map",
+
+            // Europe
+            "Albania" to "https://download.mapsforge.org/maps/v5/europe/albania.map",
+            "Andorra" to "https://download.mapsforge.org/maps/v5/europe/andorra.map",
+            "Austria" to "https://download.mapsforge.org/maps/v5/europe/austria.map",
+            "Belarus" to "https://download.mapsforge.org/maps/v5/europe/belarus.map",
+            "Belgium" to "https://download.mapsforge.org/maps/v5/europe/belgium.map",
+            "Bosnia & Herzegovina" to "https://download.mapsforge.org/maps/v5/europe/bosnia-herzegovina.map",
+            "Bulgaria" to "https://download.mapsforge.org/maps/v5/europe/bulgaria.map",
+            "Croatia" to "https://download.mapsforge.org/maps/v5/europe/croatia.map",
+            "Czech Republic" to "https://download.mapsforge.org/maps/v5/europe/czech-republic.map",
+            "Denmark" to "https://download.mapsforge.org/maps/v5/europe/denmark.map",
+            "Estonia" to "https://download.mapsforge.org/maps/v5/europe/estonia.map",
+            "Finland" to "https://download.mapsforge.org/maps/v5/europe/finland.map",
+            "France" to "https://download.mapsforge.org/maps/v5/europe/france.map",
+            "Germany" to "https://download.mapsforge.org/maps/v5/europe/germany.map",
+            "Greece" to "https://download.mapsforge.org/maps/v5/europe/greece.map",
+            "Hungary" to "https://download.mapsforge.org/maps/v5/europe/hungary.map",
+            "Iceland" to "https://download.mapsforge.org/maps/v5/europe/iceland.map",
+            "Ireland" to "https://download.mapsforge.org/maps/v5/europe/ireland.map",
+            "Italy" to "https://download.mapsforge.org/maps/v5/europe/italy.map",
+            "Kosovo" to "https://download.mapsforge.org/maps/v5/europe/kosovo.map",
+            "Latvia" to "https://download.mapsforge.org/maps/v5/europe/latvia.map",
+            "Liechtenstein" to "https://download.mapsforge.org/maps/v5/europe/liechtenstein.map",
+            "Lithuania" to "https://download.mapsforge.org/maps/v5/europe/lithuania.map",
+            "Luxembourg" to "https://download.mapsforge.org/maps/v5/europe/luxembourg.map",
+            "Malta" to "https://download.mapsforge.org/maps/v5/europe/malta.map",
+            "Moldova" to "https://download.mapsforge.org/maps/v5/europe/moldova.map",
+            "Monaco" to "https://download.mapsforge.org/maps/v5/europe/monaco.map",
+            "Montenegro" to "https://download.mapsforge.org/maps/v5/europe/montenegro.map",
+            "Netherlands" to "https://download.mapsforge.org/maps/v5/europe/netherlands.map",
+            "North Macedonia" to "https://download.mapsforge.org/maps/v5/europe/north-macedonia.map",
+            "Norway" to "https://download.mapsforge.org/maps/v5/europe/norway.map",
+            "Poland" to "https://download.mapsforge.org/maps/v5/europe/poland.map",
+            "Portugal" to "https://download.mapsforge.org/maps/v5/europe/portugal.map",
+            "Romania" to "https://download.mapsforge.org/maps/v5/europe/romania.map",
+            "Russia" to "https://download.mapsforge.org/maps/v5/europe/russia.map",
+            "Serbia" to "https://download.mapsforge.org/maps/v5/europe/serbia.map",
+            "Slovakia" to "https://download.mapsforge.org/maps/v5/europe/slovakia.map",
+            "Slovenia" to "https://download.mapsforge.org/maps/v5/europe/slovenia.map",
+            "Spain" to "https://download.mapsforge.org/maps/v5/europe/spain.map",
+            "Sweden" to "https://download.mapsforge.org/maps/v5/europe/sweden.map",
+            "Switzerland" to "https://download.mapsforge.org/maps/v5/europe/switzerland.map",
+            "Ukraine" to "https://download.mapsforge.org/maps/v5/europe/ukraine.map",
+            "United Kingdom" to "https://download.mapsforge.org/maps/v5/europe/united_kingdom.map",
+
+            // North America
+            "Canada" to "https://download.mapsforge.org/maps/v5/north-america/canada.map",
+            "Costa Rica" to "https://download.mapsforge.org/maps/v5/north-america/costa-rica.map",
+            "Cuba" to "https://download.mapsforge.org/maps/v5/north-america/cuba.map",
+            "Dominican Republic" to "https://download.mapsforge.org/maps/v5/north-america/dominican-republic.map",
+            "El Salvador" to "https://download.mapsforge.org/maps/v5/north-america/el-salvador.map",
+            "Guatemala" to "https://download.mapsforge.org/maps/v5/north-america/guatemala.map",
+            "Haiti" to "https://download.mapsforge.org/maps/v5/north-america/haiti.map",
+            "Honduras" to "https://download.mapsforge.org/maps/v5/north-america/honduras.map",
+            "Jamaica" to "https://download.mapsforge.org/maps/v5/north-america/jamaica.map",
+            "Mexico" to "https://download.mapsforge.org/maps/v5/north-america/mexico.map",
+            "Nicaragua" to "https://download.mapsforge.org/maps/v5/north-america/nicaragua.map",
+            "Panama" to "https://download.mapsforge.org/maps/v5/north-america/panama.map",
+            "US - California" to "https://download.mapsforge.org/maps/v5/north-america/us/california.map",
+            "US - Florida" to "https://download.mapsforge.org/maps/v5/north-america/us/florida.map",
+            "US - New York" to "https://download.mapsforge.org/maps/v5/north-america/us/new_york.map",
+            "US - Texas" to "https://download.mapsforge.org/maps/v5/north-america/us/texas.map",
+
+            // South America
+            "Argentina" to "https://download.mapsforge.org/maps/v5/south-america/argentina.map",
+            "Bolivia" to "https://download.mapsforge.org/maps/v5/south-america/bolivia.map",
+            "Brazil" to "https://download.mapsforge.org/maps/v5/south-america/brazil.map",
+            "Chile" to "https://download.mapsforge.org/maps/v5/south-america/chile.map",
+            "Colombia" to "https://download.mapsforge.org/maps/v5/south-america/colombia.map",
+            "Ecuador" to "https://download.mapsforge.org/maps/v5/south-america/ecuador.map",
+            "Guyana" to "https://download.mapsforge.org/maps/v5/south-america/guyana.map",
+            "Paraguay" to "https://download.mapsforge.org/maps/v5/south-america/paraguay.map",
+            "Peru" to "https://download.mapsforge.org/maps/v5/south-america/peru.map",
+            "Suriname" to "https://download.mapsforge.org/maps/v5/south-america/suriname.map",
+            "Uruguay" to "https://download.mapsforge.org/maps/v5/south-america/uruguay.map",
+            "Venezuela" to "https://download.mapsforge.org/maps/v5/south-america/venezuela.map",
+
+            // Oceania
+            "Australia" to "https://download.mapsforge.org/maps/v5/oceania/australia.map",
+            "Fiji" to "https://download.mapsforge.org/maps/v5/oceania/fiji.map",
+            "New Zealand" to "https://download.mapsforge.org/maps/v5/oceania/new-zealand.map",
+            "Papua New Guinea" to "https://download.mapsforge.org/maps/v5/oceania/papua-new-guinea.map"
+        )
+
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+
+        fun updateDownloadedMapsList() {
+            dBind.layoutDownloadedMapsContainer.removeAllViews()
+            val mapFiles = filesDir.listFiles()?.filter { it.extension.lowercase() == "map" } ?: emptyList()
+            val activeMapName = prefs.getString("active_offline_map", null)
+
+            if (mapFiles.isNotEmpty()) {
+                dBind.txtDownloadedTitle.visibility = android.view.View.VISIBLE
+                dBind.layoutDownloadedMapsContainer.visibility = android.view.View.VISIBLE
+                dBind.btnUseOnlineMap.visibility = android.view.View.VISIBLE
+
+                for (file in mapFiles) {
+                    val itemBind = ItemDownloadedMapBinding.inflate(layoutInflater, dBind.layoutDownloadedMapsContainer, false)
+                    val mapDisplayName = file.nameWithoutExtension
+                        .replace("_", " ")
+                        .replace("-", " ")
+                        .split(" ")
+                        .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
+
+                    val sizeMb = String.format("%.1f MB", file.length() / (1024.0 * 1024.0))
+                    val isActive = (file.name == activeMapName) || (activeMapName == null && file == mapFiles.first())
+
+                    itemBind.txtMapName.text = mapDisplayName
+                    itemBind.txtMapInfo.text = if (isActive) "$sizeMb • Active Map" else "$sizeMb • Offline"
+
+                    if (isActive) {
+                        itemBind.btnSelectMap.text = "Active"
+                        itemBind.btnSelectMap.isEnabled = false
+                    } else {
+                        itemBind.btnSelectMap.text = "Use Map"
+                        itemBind.btnSelectMap.isEnabled = true
+                        itemBind.btnSelectMap.setOnClickListener {
+                            try {
+                                val tileSource = MapsForgeTileSource.createFromFiles(arrayOf(file), InternalRenderTheme.OSMARENDER, "OSMARENDER")
+                                if (tileSource != null) {
+                                    val provider = MapsForgeTileProvider(SimpleRegisterReceiver(this@MainActivity), tileSource, null)
+                                    map.tileProvider = provider
+                                    map.setTileSource(tileSource)
+                                    map.invalidate()
+                                    prefs.edit().putString("active_offline_map", file.name).apply()
+                                    zoomToMapFileBounds(file)
+                                    updateDownloadedMapsList()
+                                    showSnackbar("Switched map to $mapDisplayName")
+                                }
+                            } catch (e: Exception) {
+                                showSnackbar("Error switching map: ${e.message}")
+                            }
+                        }
+                    }
+
+                    itemBind.btnDeleteMap.setOnClickListener {
+                        file.delete()
+                        if (isActive) {
+                            prefs.edit().remove("active_offline_map").apply()
+                            setupOfflineMap()
+                        }
+                        updateDownloadedMapsList()
+                        showSnackbar("Deleted $mapDisplayName")
+                    }
+
+                    dBind.layoutDownloadedMapsContainer.addView(itemBind.root)
+                }
+            } else {
+                dBind.txtDownloadedTitle.visibility = android.view.View.GONE
+                dBind.layoutDownloadedMapsContainer.visibility = android.view.View.GONE
+                dBind.btnUseOnlineMap.visibility = android.view.View.GONE
+            }
+        }
+
+        updateDownloadedMapsList()
+
+        dBind.btnUseOnlineMap.setOnClickListener {
+            map.tileProvider = MapTileProviderBasic(this, TileSourceFactory.MAPNIK)
+            map.setTileSource(TileSourceFactory.MAPNIK)
+            map.invalidate()
+            prefs.edit().putString("active_offline_map", "online").apply()
+            updateDownloadedMapsList()
+            showSnackbar("Switched to Online Map (Mapnik)")
+        }
+
+        val adapter = android.widget.ArrayAdapter(
+            this,
+            android.R.layout.simple_dropdown_item_1line,
+            countryMapUrls.keys.toList()
+        )
+        dBind.autoCompleteCountry.setAdapter(adapter)
+
+        var downloadJob: kotlinx.coroutines.Job? = null
+
+        dBind.btnDownloadMap.setOnClickListener {
+            val selectedCountry = dBind.autoCompleteCountry.text.toString().trim()
+            val urlString = countryMapUrls[selectedCountry]
+
+            if (urlString == null) {
+                showSnackbar("Please select a valid country from the list")
+                return@setOnClickListener
+            }
+
+            dBind.layoutProgress.visibility = android.view.View.VISIBLE
+            dBind.progressIndicator.isIndeterminate = true
+            dBind.txtDownloadStatus.text = "Starting download for $selectedCountry..."
+            dBind.btnDownloadMap.isEnabled = false
+
+            val sanitizedFileName = "${selectedCountry.lowercase().replace(" ", "_").replace("-", "_")}.map"
+            val destinationFile = File(filesDir, sanitizedFileName)
+
+            downloadJob = lifecycleScope.launch(Dispatchers.IO) {
+                var connection: java.net.HttpURLConnection? = null
+                try {
+                    val url = java.net.URL(urlString)
+                    connection = url.openConnection() as java.net.HttpURLConnection
+                    connection.connectTimeout = 15000
+                    connection.readTimeout = 15000
+                    connection.connect()
+
+                    if (connection.responseCode != java.net.HttpURLConnection.HTTP_OK) {
+                        throw java.io.IOException("HTTP error code: ${connection.responseCode}")
+                    }
+
+                    val fileLength = connection.contentLength
+                    val input = connection.inputStream
+                    val output = destinationFile.outputStream()
+
+                    val data = ByteArray(8192)
+                    var total: Long = 0
+                    var count: Int
+
+                    while (input.read(data).also { count = it } != -1) {
+                        if (!coroutineContext.isActive) {
+                            output.close()
+                            input.close()
+                            if (destinationFile.exists()) destinationFile.delete()
+                            return@launch
+                        }
+                        total += count.toLong()
+                        output.write(data, 0, count)
+
+                        if (fileLength > 0) {
+                            val progress = (total * 100 / fileLength).toInt()
+                            val mbDownloaded = total / (1024 * 1024)
+                            val mbTotal = fileLength / (1024 * 1024)
+                            withContext(Dispatchers.Main) {
+                                dBind.progressIndicator.isIndeterminate = false
+                                dBind.progressIndicator.progress = progress
+                                dBind.txtDownloadStatus.text = "Downloading $selectedCountry... $mbDownloaded MB / $mbTotal MB ($progress%)"
+                            }
+                        }
+                    }
+
+                    output.flush()
+                    output.close()
+                    input.close()
+
+                    val tileSource = MapsForgeTileSource.createFromFiles(arrayOf(destinationFile), InternalRenderTheme.OSMARENDER, "OSMARENDER")
+                    withContext(Dispatchers.Main) {
+                        if (tileSource != null) {
+                            val provider = MapsForgeTileProvider(SimpleRegisterReceiver(this@MainActivity), tileSource, null)
+                            map.tileProvider = provider
+                            map.setTileSource(tileSource)
+                            map.invalidate()
+                            prefs.edit().putString("active_offline_map", destinationFile.name).apply()
+                            zoomToMapFileBounds(destinationFile)
+                            updateDownloadedMapsList()
+                            dialog.dismiss()
+                            showSnackbar("Offline map downloaded and loaded: $selectedCountry")
+                        } else {
+                            dBind.txtDownloadStatus.text = "Error initializing downloaded map"
+                            dBind.btnDownloadMap.isEnabled = true
+                        }
+                    }
+                } catch (e: Exception) {
+                    if (destinationFile.exists()) destinationFile.delete()
+                    withContext(Dispatchers.Main) {
+                        dBind.layoutProgress.visibility = android.view.View.GONE
+                        dBind.btnDownloadMap.isEnabled = true
+                        showSnackbar("Download failed: ${e.message}")
+                    }
+                } finally {
+                    connection?.disconnect()
+                }
+            }
+        }
+
+        dBind.btnCancel.setOnClickListener {
+            downloadJob?.cancel()
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            downloadJob?.cancel()
+        }
 
         dialog.show()
     }
@@ -257,13 +673,155 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------- OFFLINE MAP --------------------
+    @SuppressLint("MissingPermission")
+    private fun zoomToUserLocation() {
+        val loc = lastKnownLocation
+        if (loc != null) {
+            val userPoint = GeoPoint(loc.latitude, loc.longitude)
+            map.post {
+                map.controller.setZoom(15.5)
+                map.controller.animateTo(userPoint)
+            }
+        } else if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocation.lastLocation.addOnSuccessListener { locResult ->
+                if (locResult != null) {
+                    lastKnownLocation = locResult
+                    val userPoint = GeoPoint(locResult.latitude, locResult.longitude)
+                    map.post {
+                        map.controller.setZoom(15.5)
+                        map.controller.animateTo(userPoint)
+                    }
+                }
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun zoomToMapFileBounds(file: File) {
+        try {
+            val mapFile = MapFile(file)
+            val box = mapFile.mapFileInfo.boundingBox
+            mapFile.close()
+
+            val userLoc = lastKnownLocation
+            if (userLoc != null && box != null &&
+                userLoc.latitude >= box.minLatitude && userLoc.latitude <= box.maxLatitude &&
+                userLoc.longitude >= box.minLongitude && userLoc.longitude <= box.maxLongitude) {
+                zoomToUserLocation()
+            } else {
+                fusedLocation.lastLocation.addOnSuccessListener { loc ->
+                    if (loc != null && box != null &&
+                        loc.latitude >= box.minLatitude && loc.latitude <= box.maxLatitude &&
+                        loc.longitude >= box.minLongitude && loc.longitude <= box.maxLongitude) {
+                        lastKnownLocation = loc
+                        zoomToUserLocation()
+                    } else if (box != null) {
+                        val osmBox = BoundingBox(box.maxLatitude, box.maxLongitude, box.minLatitude, box.minLongitude)
+                        map.post {
+                            map.zoomToBoundingBox(osmBox, true, 24)
+                            if (map.zoomLevelDouble < 7.5) {
+                                map.controller.setZoom(7.5)
+                                map.controller.animateTo(GeoPoint((box.minLatitude + box.maxLatitude) / 2.0, (box.minLongitude + box.maxLongitude) / 2.0))
+                            }
+                        }
+                    }
+                }.addOnFailureListener {
+                    if (box != null) {
+                        val osmBox = BoundingBox(box.maxLatitude, box.maxLongitude, box.minLatitude, box.minLongitude)
+                        map.post {
+                            map.zoomToBoundingBox(osmBox, true, 24)
+                            if (map.zoomLevelDouble < 7.5) {
+                                map.controller.setZoom(7.5)
+                                map.controller.animateTo(GeoPoint((box.minLatitude + box.maxLatitude) / 2.0, (box.minLongitude + box.maxLongitude) / 2.0))
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            zoomToUserLocation()
+        }
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = connectivityManager.activeNetwork ?: return false
+            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+            return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } else {
+            @Suppress("DEPRECATION")
+            val networkInfo = connectivityManager.activeNetworkInfo
+            @Suppress("DEPRECATION")
+            return networkInfo != null && networkInfo.isConnected
+        }
+    }
+
+    private fun loadOfflineMapFile(file: File) {
+        try {
+            val tileSource = MapsForgeTileSource.createFromFiles(arrayOf(file), InternalRenderTheme.OSMARENDER, "OSMARENDER")
+            if (tileSource != null) {
+                val provider = MapsForgeTileProvider(SimpleRegisterReceiver(this), tileSource, null)
+                map.tileProvider = provider
+                map.setTileSource(tileSource)
+                zoomToMapFileBounds(file)
+            }
+        } catch (e: Exception) {
+            loadOnlineMapnik()
+        }
+    }
+
+    private fun loadOnlineMapnik() {
+        map.tileProvider = MapTileProviderBasic(this, TileSourceFactory.MAPNIK)
+        map.setTileSource(TileSourceFactory.MAPNIK)
+        zoomToUserLocation()
+    }
+
     private fun setupOfflineMap() {
         // Load osmdroid configuration
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
 
-        // Use online OSM tiles - tiles viewed once will be cached automatically
-        map.setTileSource(TileSourceFactory.MAPNIK)
-        
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val userChoice = prefs.getString("active_offline_map", null)
+        val onlineAvailable = isNetworkAvailable()
+
+        var mapLoaded = false
+
+        // User explicitly picked a downloaded .map file
+        if (userChoice != null && userChoice != "online") {
+            val choiceFile = File(filesDir, userChoice)
+            if (choiceFile.exists()) {
+                loadOfflineMapFile(choiceFile)
+                mapLoaded = true
+            }
+        }
+
+        if (!mapLoaded) {
+            if (onlineAvailable) {
+                // Online available -> automatically use Online Mapnik
+                loadOnlineMapnik()
+            } else {
+                // Offline -> automatically use downloaded offline map or prompt to download
+                val offlineFile = filesDir.listFiles()?.firstOrNull { it.extension.lowercase() == "map" }
+                if (offlineFile != null && offlineFile.exists()) {
+                    loadOfflineMapFile(offlineFile)
+                    prefs.edit().putString("active_offline_map", offlineFile.name).apply()
+                    val mapName = offlineFile.nameWithoutExtension.replace("_", " ").replace("-", " ")
+                    showSnackbar("Offline mode: loaded $mapName map")
+                } else {
+                    loadOnlineMapnik()
+                    MaterialAlertDialogBuilder(this)
+                        .setTitle("No Offline Map Found")
+                        .setMessage("You are currently offline and haven't downloaded any country map. Would you like to download one now for offline use?")
+                        .setPositiveButton("Download Country Map") { _, _ ->
+                            showDownloadMapDialog()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
+            }
+        }
+
         // Increase cache size to 500 MB for better offline experience
         Configuration.getInstance().tileFileSystemCacheMaxBytes = 500L * 1024L * 1024L
         Configuration.getInstance().tileFileSystemCacheTrimBytes = 450L * 1024L * 1024L
@@ -316,8 +874,7 @@ class MainActivity : AppCompatActivity() {
 
         fusedLocation.lastLocation.addOnSuccessListener {
             lastKnownLocation = it
-            // Automatically adjust viewport once location is acquired
-            adjustMapViewport()
+            zoomToUserLocation()
         }
 
         // Follow user as they walk
@@ -339,7 +896,7 @@ class MainActivity : AppCompatActivity() {
                 binding.cardAccuracy.setCardBackgroundColor(color)
 
                 if (isFirstFix) {
-                    adjustMapViewport()
+                    zoomToUserLocation()
                 }
 
                 if (mappingMode == MappingMode.WALKING && targetPoint == null) {
@@ -529,6 +1086,7 @@ class MainActivity : AppCompatActivity() {
             mimeType?.contains("csv") == true || extension == "csv" || mimeType == "text/comma-separated-values" -> "csv"
             mimeType?.contains("gpx") == true || extension == "gpx" -> "gpx"
             mimeType?.contains("json") == true || extension == "geojson" || extension == "json" -> "geojson"
+            extension == "map" -> "mapsforge"
             else -> null
         }
 
@@ -538,6 +1096,7 @@ class MainActivity : AppCompatActivity() {
                     "csv" -> importCsv(uri)
                     "gpx" -> importGpx(uri)
                     "geojson" -> importGeoJson(uri)
+                    "mapsforge" -> importMapsforgeMap(uri)
                     else -> {
                         if (tryImportAsCsvFallback(uri)) return@launch
                         
@@ -548,6 +1107,39 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { showSnackbar("${getString(R.string.import_failed)}: ${e.message}") }
+            }
+        }
+    }
+
+    private suspend fun importMapsforgeMap(uri: Uri) {
+        val fileName = getFileName(uri) ?: "offline_map.map"
+        val destinationFile = File(filesDir, fileName)
+
+        try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                destinationFile.outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+
+            val tileSource = MapsForgeTileSource.createFromFiles(arrayOf(destinationFile), InternalRenderTheme.OSMARENDER, "OSMARENDER")
+            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            withContext(Dispatchers.Main) {
+                if (tileSource != null) {
+                    val provider = MapsForgeTileProvider(SimpleRegisterReceiver(this@MainActivity), tileSource, null)
+                    map.tileProvider = provider
+                    map.setTileSource(tileSource)
+                    map.invalidate()
+                    prefs.edit().putString("active_offline_map", destinationFile.name).apply()
+                    zoomToMapFileBounds(destinationFile)
+                    showSnackbar("${getString(R.string.import_success)}: $fileName")
+                } else {
+                    showSnackbar("Failed to initialize Mapsforge map from $fileName")
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                showSnackbar("Error importing Mapsforge map: ${e.message}")
             }
         }
     }

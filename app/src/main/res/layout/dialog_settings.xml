@@ -71,6 +71,22 @@
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Offline Maps"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnDownloadOfflineMap"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Download Country Map"
+        app:icon="@android:drawable/ic_menu_save" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnClose"
         style="?attr/borderlessButtonStyle"

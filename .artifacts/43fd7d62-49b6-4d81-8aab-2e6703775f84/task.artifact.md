@@ -1,0 +1,3 @@
+- `[ ]` Update import handling in MainActivity to support `.map` files (Mapsforge vector maps)
+- `[ ]` Implement Mapsforge tile source configuration and rendering in OSMDroid `MapView`
+- `[ ]` Build and verify project compilation

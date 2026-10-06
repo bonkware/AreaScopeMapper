@@ -47,6 +47,12 @@ osmdroidGeojson = { module = "org.osmdroid:osmdroid-geojson", version.ref = "osm
 osmbonuspack = { module = "com.github.mkergall:osmbonuspack", version.ref = "osmbonuspack" }
 androidx-preference-ktx = { group = "androidx.preference", name = "preference-ktx", version.ref = "preferenceKtx" }
 
+# --- Mapsforge libraries ---
+mapsforgeMapAndroid = { module = "org.mapsforge:mapsforge-map-android", version = "0.20.0" }
+mapsforgeMapReader = { module = "org.mapsforge:mapsforge-map-reader", version = "0.20.0" }
+mapsforgeMap = { module = "org.mapsforge:mapsforge-map", version = "0.20.0" }
+mapsforgeThemes = { module = "org.mapsforge:mapsforge-themes", version = "0.20.0" }
+
 # --- Navigation & Import ---
 opencsv = { group = "com.opencsv", name = "opencsv", version.ref = "opencsv" }
 

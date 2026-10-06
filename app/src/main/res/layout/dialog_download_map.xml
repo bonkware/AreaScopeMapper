@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Download Offline Map"
+        android:textAppearance="?attr/textAppearanceTitleLarge"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/txtDownloadedTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Downloaded Offline Maps"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:textStyle="bold"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:id="@+id/layoutDownloadedMapsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:layout_marginBottom="16dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnUseOnlineMap"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Switch to Online Map (Mapnik)"
+        android:visibility="gone"
+        android:layout_marginBottom="16dp"
+        app:icon="@android:drawable/ic_menu_mapmode" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Download New Country Map"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/inputCountryLayout"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Select Country / Region"
+        android:layout_marginBottom="16dp">
+
+        <AutoCompleteTextView
+            android:id="@+id/autoCompleteCountry"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="none" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:id="@+id/layoutProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/txtDownloadStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Downloading..."
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progressIndicator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:indeterminate="true" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancel"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Close" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDownloadMap"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Download" />
+    </LinearLayout>
+
+</LinearLayout>
