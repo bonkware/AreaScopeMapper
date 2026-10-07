@@ -19,6 +19,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Looper
+import android.os.PowerManager
+import android.view.WindowManager
 import android.provider.MediaStore
 import android.widget.ImageView
 import androidx.annotation.RequiresApi
@@ -243,7 +245,7 @@ class MainActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
-        val countryMapUrls = linkedMapOf(
+        val countryMapUrls = mapOf(
             // Africa
             "Algeria" to "https://download.mapsforge.org/maps/v5/africa/algeria.map",
             "Angola" to "https://download.mapsforge.org/maps/v5/africa/angola.map",
@@ -430,7 +432,7 @@ class MainActivity : AppCompatActivity() {
             "Fiji" to "https://download.mapsforge.org/maps/v5/oceania/fiji.map",
             "New Zealand" to "https://download.mapsforge.org/maps/v5/oceania/new-zealand.map",
             "Papua New Guinea" to "https://download.mapsforge.org/maps/v5/oceania/papua-new-guinea.map"
-        )
+        ).toSortedMap(String.CASE_INSENSITIVE_ORDER)
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
 
@@ -536,6 +538,14 @@ class MainActivity : AppCompatActivity() {
             dBind.txtDownloadStatus.text = "Starting download for $selectedCountry..."
             dBind.btnDownloadMap.isEnabled = false
 
+            // Keep screen on while downloading
+            dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AreaScopeMapper:MapDownloadWakeLock")
+            wakeLock.acquire(15 * 60 * 1000L) // 15 min max timeout
+
             val sanitizedFileName = "${selectedCountry.lowercase().replace(" ", "_").replace("-", "_")}.map"
             val destinationFile = File(filesDir, sanitizedFileName)
 
@@ -544,8 +554,9 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val url = java.net.URL(urlString)
                     connection = url.openConnection() as java.net.HttpURLConnection
-                    connection.connectTimeout = 15000
-                    connection.readTimeout = 15000
+                    connection.connectTimeout = 30000
+                    connection.readTimeout = 60000
+                    connection.instanceFollowRedirects = true
                     connection.connect()
 
                     if (connection.responseCode != java.net.HttpURLConnection.HTTP_OK) {
@@ -556,9 +567,10 @@ class MainActivity : AppCompatActivity() {
                     val input = connection.inputStream
                     val output = destinationFile.outputStream()
 
-                    val data = ByteArray(8192)
+                    val data = ByteArray(16384)
                     var total: Long = 0
                     var count: Int
+                    var lastProgressUpdate = 0L
 
                     while (input.read(data).also { count = it } != -1) {
                         if (!coroutineContext.isActive) {
@@ -570,7 +582,9 @@ class MainActivity : AppCompatActivity() {
                         total += count.toLong()
                         output.write(data, 0, count)
 
-                        if (fileLength > 0) {
+                        val now = System.currentTimeMillis()
+                        if (fileLength > 0 && (now - lastProgressUpdate > 250)) {
+                            lastProgressUpdate = now
                             val progress = (total * 100 / fileLength).toInt()
                             val mbDownloaded = total / (1024 * 1024)
                             val mbTotal = fileLength / (1024 * 1024)
@@ -608,10 +622,21 @@ class MainActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         dBind.layoutProgress.visibility = android.view.View.GONE
                         dBind.btnDownloadMap.isEnabled = true
-                        showSnackbar("Download failed: ${e.message}")
+                        if (coroutineContext.isActive) {
+                            showSnackbar("Download failed: ${e.message}")
+                        }
                     }
                 } finally {
                     connection?.disconnect()
+                    if (wakeLock.isHeld) {
+                        try { wakeLock.release() } catch (_: Exception) {}
+                    }
+                    withContext(Dispatchers.Main) {
+                        try {
+                            dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        } catch (_: Exception) {}
+                    }
                 }
             }
         }
